@@ -1,3 +1,5 @@
+require 'posix_mq'
+require 'uc/logger'
 module Uc
   class Mqueue
     include ::Uc::Logger
@@ -9,7 +11,7 @@ module Uc
     end
 
     def setup
-      attr = ::POSIX::Attr.new(0,100,100)       # o_readonly, maxmsg, msgsize
+      attr = ::POSIX_MQ::Attr.new(0,100,100)       # o_readonly, maxmsg, msgsize
       ::POSIX_MQ.new("/#{name}", :rw, 0700, attr)
       make_empty
     end
@@ -34,7 +36,7 @@ module Uc
       return writer
     end
 
-    def watch(&block, loglevel: :info, msg: "success", err_msg: "error")
+    def watch(loglevel: :info, msg: "success", err_msg: "error", &block)
       setup
       make_empty
       yield
