@@ -1,7 +1,8 @@
-require 'pathname'
 require 'uc/logger'
 require 'uc/shell_helper'
 require 'uc/mqueue'
+require 'uc/unicorn'
+require 'uc/unicorn_config'
 require 'uc/error'
 
 module Uc
@@ -10,14 +11,14 @@ module Uc
     include ::Uc::ShellHelper
     include ::Uc::Logger
 
-    attr_reader :app_dir
+    attr_reader :uconfig
 
     def initialize(app_dir)
-      @app_dir = Pathname.new(app_dir)
+      @uconfig = ::Uc::UnicornConfig.new(app_dir)
     end
 
     def app_env(&block)
-      dirs_checked? || check_dirs
+      uconfig.dirs_checked? || uconfig.check_dirs
       yield if block
     end
 
@@ -28,7 +29,7 @@ module Uc
           return
         end
 
-        cmd %{unicorn -c #{config_path} -D}, return_output: false,
+        cmd %{unicorn -c #{uconfig.config_path} -D}, return_output: false,
           error_msg: "error starting unicorn"
       end
     end
@@ -45,7 +46,7 @@ module Uc
     end
 
     def kill(pid, timeout)
-      Process.kill(15, pid)
+      Process.kill(:TERM, pid)
       logger.debug "TERM signal sent to #{pid}"
       (1..timeout).each do
         if not process_running? pid
@@ -75,18 +76,18 @@ module Uc
         start
         return
       end
+      queue ||= get_queue_name
       raise ::Uc::Error, "argument missing mq name"  if (queue.nil? || queue.empty?)
       mq = ::Uc::Mqueue.new(queue)
-      mq.watch do
+      mq.watch err_msg: "server may not have restarted successfully" do
         Process.kill("USR2", pid)
       end
     end
 
     def process_running?(pid)
       return false if pid <= 0
-
-      running = Process.kill(0, pid)
-      running == 1 ? true : false
+      Process.getpgid pid
+      return true
     rescue Errno::ESRCH
         return false
     end
@@ -95,46 +96,19 @@ module Uc
       process_running? pid
     end
 
-    def config_path
-      @config_path ||= rpath("config/unicorn.rb")
-    end
-
-    def rack_path
-      rpath("config.ru")
-    end
-
-    def pid_file
-      @pid_file ||= rpath("tmp/pids/unicorn.pid")
+    def get_queue_name
+      Dir.chdir uconfig.app_dir do
+        return ::Uc::Unicorn.get_queue_name
+      end
     end
 
     def read_pid
-      (File.read pid_file).to_i rescue 0
+      uconfig.read_pid
     end
 
     def pid
       @pid ||= read_pid
     end
-
-    def check_dirs
-      logger.debug "Using app_dir => #{app_dir}"
-      raise ::Uc::Error, %{app_dir not readable} if not app_dir.readable?
-      Dir.chdir app_dir do
-        raise ::Uc::Error, %{no config.ru found in app_dir} if not rack_path.readable?
-        raise ::Uc::Error, %{no unicorn config found %} if not config_path.readable?
-      end
-      @dirs_checked = true
-    end
-
-    def rpath(path)
-      path = Pathname.new(path)
-      raise "absolute path specified: #{path}" if path.absolute?
-      app_dir + path
-    end
-
-    def dirs_checked?
-      @dirs_checked
-    end
-
 
   end
 end

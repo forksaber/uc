@@ -2,7 +2,12 @@ require 'uc/mqueue'
 module Uc
   module Unicorn
 
-    def self.rolling_restart(server, worker, queue_name, sleep_secs: 1)
+    def self.queue_file
+      "config/unicorn_mq"
+    end
+
+    def self.rolling_restart(server, worker, queue_name: nil, sleep_secs: 1)
+      queue_name ||= get_queue_name
       old_pid = "#{server.config[:pid]}.oldbin"
       if old_pid != server.pid
         begin
@@ -11,13 +16,12 @@ module Uc
 
           mq = ::Uc::Mqueue.new(queue_name)
           writer = mq.nb_writer
-          writer.send("started worker #{worker.nr}")
+          writer.send("started worker #{worker.nr + 1}")
           if sig == :QUIT
             writer.send("fin")
           end
           sleep sleep_secs
         rescue Errno::ENOENT, Errno::ESRCH, Errno::EAGAIN => e
-          puts "#{e.message}"
         end
      end
     end
@@ -28,6 +32,23 @@ module Uc
       ENV.delete "RUBYOPT"
       ENV.delete "GEM_HOME"
       ENV.delete "GEM_PATH"
+    end
+
+
+    def self.get_queue_name
+      queue_name = queue_name_from_file
+      queue_name ||= "unicorn_#{Process.uid}"
+      return queue_name
+    end
+
+    def self.queue_name_from_file
+      queue_file = Pathname.new self.queue_file
+      queue_name = nil
+      if queue_file.readable?
+        queue_name = File.read(queue_file).chomp
+        queue_name = (queue_name.empty? ? nil : queue_name)
+      end
+      return queue_name
     end
 
 

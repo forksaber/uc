@@ -39,7 +39,7 @@ begin
   when "start", "stop", "restart", "status"
     server.send command.to_sym
   when "rr", "rolling-restart"
-    server.rolling_restart ARGV
+    server.rolling_restart ARGV.shift
   else
     puts "Invalid command"
     abort

@@ -12,6 +12,7 @@ module Uc
 
     def setup
       attr = ::POSIX_MQ::Attr.new(0,100,100)       # o_readonly, maxmsg, msgsize
+      puts name
       ::POSIX_MQ.new("/#{name}", :rw, 0700, attr)
       make_empty
     end
@@ -45,12 +46,14 @@ module Uc
 
     def wait_for_fin(msg, err_msg, loglevel)
       message = ""
+      timeout = 30
       while message != "fin"
-        reader.receive(message, 30)
+        reader.receive(message, timeout)
         logger.send(loglevel, message) if message != "fin"
       end
       logger.info msg
     rescue Errno::ETIMEDOUT
+      logger.info "#{timeout}s timeout reached while waiting for message"
       raise ::Uc::Error, err_msg
     end
 
