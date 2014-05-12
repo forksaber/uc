@@ -7,8 +7,8 @@ Gem::Specification.new do |spec|
   spec.name          = "uc"
   spec.version       = Uc::VERSION
   spec.authors       = ["Neeraj"]
-  spec.summary       = %q{TODO: Unicorn controller}
-  spec.description   = %q{TODO: Unicorn controller}
+  spec.summary       = %q{Unicorn controller}
+  spec.description   = %q{Unicorn controller}
   spec.homepage      = ""
   spec.license       = "MIT"
 

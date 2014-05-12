@@ -1,0 +1,51 @@
+#!/usr/bin/env ruby
+lib = File.expand_path(File.dirname(__FILE__) + '/../lib')
+$LOAD_PATH.unshift(lib) if File.directory?(lib) && !$LOAD_PATH.include?(lib)
+
+require 'optparse'
+require 'uc/error'
+require 'uc/server'
+
+options = {}
+opts_parser = OptionParser.new do |opts| 
+    
+    banner = [] 
+    banner << "Usage: uc [options] command"
+    banner << "Available commands: "
+    banner << " start stop restart status "
+    banner << " rolling-restart "
+
+    opts.banner = banner
+
+    opts.on("-d", "--app-dir [APP DIR]" , "Set app dir") do |d| 
+      path = Pathname.new(d)
+      raise ::Uc::Error, "app_dir path must be absolute" if path.relative?
+      options[:app_dir] = path
+    end 
+
+    opts.on_tail("-h", "--help", "Show this message") do 
+      puts  opts
+    end 
+end
+
+begin
+  opts_parser.parse!(ARGV)
+
+  app_dir = options[:app_dir] || Dir.pwd
+  server = ::Uc::Server.new(app_dir)
+  command = ARGV.shift
+
+  case command
+  when "start", "stop", "restart", "status"
+    server.send command.to_sym
+  when "rr", "rolling-restart"
+    server.rolling_restart ARGV
+  else
+    puts "Invalid command"
+    abort
+  end
+
+rescue OptionParser::InvalidOption, OptionParser::MissingArgument, ::Uc::Error => e
+  puts "ERROR #{e.message}"
+  abort
+end
