@@ -17,11 +17,11 @@ module Uc
 
 
     def stdout_log
-      rpath "log/unicorn.stdout_log"
+      rpath "log/unicorn.stdout.log"
     end
 
     def stderr_log
-      rpath "log/unicorn.stderr_log"
+      rpath "log/unicorn.stderr.log"
     end
 
     def socket_file

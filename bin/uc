@@ -4,6 +4,7 @@ $LOAD_PATH.unshift(lib) if File.directory?(lib) && !$LOAD_PATH.include?(lib)
 
 require 'optparse'
 require 'uc/error'
+require 'uc/version'
 require 'uc/server'
 
 options = {}
@@ -11,11 +12,12 @@ opts_parser = OptionParser.new do |opts|
     
     banner = [] 
     banner << "Usage: uc [options] command"
-    banner << "Available commands: "
-    banner << " start stop restart status "
-    banner << " rolling-restart "
+    banner << ""
+    banner << "Commands: "
+    banner << "   start stop restart status "
+    banner << "   rolling-restart "
 
-    opts.banner = banner
+    opts.banner = banner.join("\n")
 
     opts.on("-d", "--app-dir [APP DIR]" , "Set app dir") do |d| 
       path = Pathname.new(d)
@@ -23,8 +25,14 @@ opts_parser = OptionParser.new do |opts|
       options[:app_dir] = path
     end 
 
+    opts.on("-v", "--version", "Show version") do |v|
+      puts ::Uc::VERSION
+      exit
+    end
+
     opts.on_tail("-h", "--help", "Show this message") do 
-      puts  opts
+      puts opts
+      exit
     end 
 end
 
@@ -40,8 +48,9 @@ begin
     server.send command.to_sym
   when "rr", "rolling-restart"
     server.rolling_restart ARGV.shift
-  else
-    puts "Invalid command"
+  when nil
+    puts "ERROR No command specified",""
+    puts opts_parser
     abort
   end
 
