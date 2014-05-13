@@ -12,9 +12,11 @@ module Uc
     include ::Uc::Logger
 
     attr_reader :uconfig
+    attr_reader :rails_env
 
-    def initialize(app_dir)
+    def initialize(app_dir, rails_env: "production")
       @uconfig = ::Uc::UnicornConfig.new(app_dir)
+      @rails_env = rails_env
     end
 
     def app_env(&block)
@@ -29,7 +31,7 @@ module Uc
           return
         end
 
-        cmd %{unicorn -c #{uconfig.config_path} -D}, return_output: false,
+        cmd %{unicorn -c #{uconfig.config_path} -D -E #{rails_env} }, return_output: false,
           error_msg: "error starting unicorn"
       end
     end

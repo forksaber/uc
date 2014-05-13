@@ -8,6 +8,8 @@ require 'uc/version'
 require 'uc/server'
 
 options = {}
+options[:rails_env] = "production"
+
 opts_parser = OptionParser.new do |opts| 
     
     banner = [] 
@@ -25,6 +27,10 @@ opts_parser = OptionParser.new do |opts|
       options[:app_dir] = path
     end 
 
+    opts.on("-e", "--environment [RAILS_ENV]" , "Set rails env") do |e|
+      options[:rails_env] = e 
+    end 
+
     opts.on("-v", "--version", "Show version") do |v|
       puts ::Uc::VERSION
       exit
@@ -40,7 +46,7 @@ begin
   opts_parser.parse!(ARGV)
 
   app_dir = options[:app_dir] || Dir.pwd
-  server = ::Uc::Server.new(app_dir)
+  server = ::Uc::Server.new(app_dir, rails_env: options[:rails_env])
   command = ARGV.shift
 
   case command
