@@ -10,6 +10,7 @@ module Uc
       queue_name ||= get_queue_name
       old_pid = "#{server.config[:pid]}.oldbin"
       if old_pid != server.pid
+        sleep sleep_secs
         begin
           sig = (worker.nr + 1) >= server.worker_processes ? :QUIT : :TTOU
           Process.kill(sig, File.read(old_pid).to_i)
@@ -20,7 +21,6 @@ module Uc
           if sig == :QUIT
             writer.send("fin")
           end
-          sleep sleep_secs
         rescue Errno::ENOENT, Errno::ESRCH, Errno::EAGAIN => e
         end
      end
@@ -51,6 +51,20 @@ module Uc
       return queue_name
     end
 
+    def self.pre_start(server, worker, url: "/")
+      app = server.instance_variable_get("@app")
+      response = app.call(rack_request(url))
+      body = response[2]
+      body.close
+    rescue => e
+      puts "WARN: pre start url failed : #{e.message}"
+    end
+
+    private
+
+    def self.rack_request(url)
+      Rack::MockRequest.env_for("http://127.0.0.1/#{url}")
+    end
 
   end
 end
