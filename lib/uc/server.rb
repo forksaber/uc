@@ -17,6 +17,7 @@ module Uc
     def initialize(app_dir, rails_env: "production")
       @uconfig = ::Uc::UnicornConfig.new(app_dir)
       @rails_env = rails_env
+      load_env
     end
 
     def app_env(&block)
@@ -110,6 +111,13 @@ module Uc
 
     def pid
       @pid ||= read_pid
+    end
+
+    def load_env
+      env_file = "#{uconfig.app_dir}/config/uc_env.rb"
+      File.readable? env_file and
+        load "#{uconfig.app_dir}/config/uc_env.rb"
+    rescue LoadError
     end
 
   end
