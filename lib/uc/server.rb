@@ -1,11 +1,12 @@
 require 'uc/logger'
 require 'uc/shell_helper'
 require 'uc/mqueue'
-require 'uc/unicorn'
-require 'uc/unicorn_config'
+require 'uc/unicorn/api'
+require 'uc/unicorn/config'
 require 'uc/error'
 
 module Uc
+
   class Server
 
     include ::Uc::ShellHelper
@@ -15,9 +16,9 @@ module Uc
     attr_reader :rails_env
 
     def initialize(app_dir, rails_env: "production")
-      @uconfig = ::Uc::UnicornConfig.new(app_dir)
+      @uconfig = ::Uc::Unicorn::Config.new(app_dir)
       @rails_env = rails_env
-      load_env
+      @uconfig.load_env
     end
 
     def app_env(&block)
@@ -48,6 +49,38 @@ module Uc
       end
     end
 
+    def status
+      status = ( server_running? ? "Running pid #{pid}" : "Stopped")  
+      puts status
+    end
+
+    def restart
+      stop
+      start
+    end
+
+    def rolling_restart
+      app_env
+      if not server_running?
+        start
+        return
+      end
+      mq = ::Uc::Mqueue.new(queue_name)
+      begin
+        mq.watch :fin do
+          Process.kill("USR2", pid)
+        end
+      rescue Errno::EACCES
+        raise ::Uc::Error, "unable to setup message queue"
+      rescue Errno::ENOENT
+        raise ::Uc::Error, "message queue deleted"
+      rescue Errno::ETIMEDOUT
+        raise ::Uc::Error, "timeout reached while waiting for server to restart"
+      end
+    end
+
+    private
+
     def kill(pid, timeout)
       Process.kill(:TERM, pid)
       logger.debug "TERM signal sent to #{pid}"
@@ -63,29 +96,6 @@ module Uc
       logger.info "Killed #{pid}"
     end
 
-    def status
-      status = ( server_running? ? "Running pid #{pid}" : "Stopped")  
-      puts status
-    end
-
-    def restart
-      stop
-      start
-    end
-
-    def rolling_restart(queue = nil)
-      app_env
-      if not server_running?
-        start
-        return
-      end
-      queue ||= get_queue_name
-      raise ::Uc::Error, "argument missing mq name"  if (queue.nil? || queue.empty?)
-      mq = ::Uc::Mqueue.new(queue)
-      mq.watch err_msg: "server may not have restarted successfully" do
-        Process.kill("USR2", pid)
-      end
-    end
 
     def process_running?(pid)
       return false if pid <= 0
@@ -99,25 +109,15 @@ module Uc
       process_running? pid
     end
 
-    def get_queue_name
-      Dir.chdir uconfig.app_dir do
-        return ::Uc::Unicorn.get_queue_name
-      end
-    end
-
-    def read_pid
-      uconfig.read_pid
-    end
-
     def pid
-      @pid ||= read_pid
+      uconfig.pid
     end
 
-    def load_env
-      env_file = "#{uconfig.app_dir}/config/uc_env.rb"
-      File.readable? env_file and
-        load "#{uconfig.app_dir}/config/uc_env.rb"
-    rescue LoadError
+    def queue_name
+      @queue_name ||= Dir.chdir uconfig.app_dir do
+        api = ::Uc::Unicorn::Api.new
+        api.queue_name
+      end
     end
 
   end

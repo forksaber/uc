@@ -1,66 +1,84 @@
 require 'posix_mq'
-require 'uc/logger'
 module Uc
   class Mqueue
-    include ::Uc::Logger
  
-    attr_reader :name 
+    attr_reader :name, :max_msg, :msg_size
 
-    def initialize(name)
+    def initialize(name, max_msg: 10, msg_size: 100)
       @name = name
+      @max_msg = max_msg
+      @msg_size = msg_size
     end
 
-    def setup
-      attr = ::POSIX_MQ::Attr.new(0,100,100)       # o_readonly, maxmsg, msgsize
-      puts name
+    def create
       ::POSIX_MQ.new("/#{name}", :rw, 0700, attr)
-      make_empty
     end
 
-    def reader
-      @reader ||= ::POSIX_MQ.new("/#{name}", :r)
+    def recreate
+      destroy
+      create
     end
 
-    def nb_reader
-      mq = ::POSIX_MQ.new("/#{name}", :r)
-      mq.nonblock = true
-      return mq
+    def destroy
+      ::POSIX_MQ.unlink("/#{name}")
+    rescue
+      return false
     end
 
-    def writer
-      POSIX_MQ.new("/#{name}", IO::WRONLY)
+    def attr
+      ::POSIX_MQ::Attr.new(0,max_msg,msg_size)
     end
-
-    def nb_writer
-      writer = POSIX_MQ.new("/#{name}", IO::WRONLY)
-      writer.nonblock = true
-      return writer
-    end
-
-    def watch(loglevel: :info, msg: "success", err_msg: "error", &block)
-      setup
-      make_empty
-      yield
-      wait_for_fin(msg, err_msg, loglevel)
-    end
-
-    def wait_for_fin(msg, err_msg, loglevel)
-      message = ""
-      timeout = 30
-      while message != "fin"
-        reader.receive(message, timeout)
-        logger.send(loglevel, message) if message != "fin"
+  
+    def new_mq(io_mode, nonblock, &block)
+      mq = ::POSIX_MQ.new("/#{name}", io_mode)
+      mq.nonblock = true if nonblock
+      return mq if not block_given?
+       
+      begin
+          yield mq
+      ensure
+          mq.close if mq
       end
-      logger.info msg
-    rescue Errno::ETIMEDOUT
-      logger.info "#{timeout}s timeout reached while waiting for message"
-      raise ::Uc::Error, err_msg
     end
 
-    def make_empty
-      mq = nb_reader
-      while true do
-        mq.receive
+    def reader(&block)
+      new_mq(:r, false, &block)
+    end
+
+    def nb_reader(&block)
+      new_mq(:r, true, &block)
+    end
+
+    def writer(&block)
+      new_mq(IO::WRONLY, false, &block)
+    end
+
+    def nb_writer(&block)
+      new_mq(IO::WRONLY, true, &block)
+    end
+
+    def wait(event, timeout, output: false)
+      event = event.to_s
+      message = ""
+      reader do |r|
+        while message != event do
+          r.receive(message, timeout)
+          puts "> #{message}" if output
+        end
+      end
+      return message
+    end
+
+    def watch(event, timeout: 30, recreate: true, &block)
+      self.recreate if recreate 
+      clear
+      yield
+      wait(event, timeout, output: true)
+    end
+
+    def clear
+      nb_reader do |mq|
+        loop { mq.receive }
       end
     rescue Errno::EAGAIN
       return

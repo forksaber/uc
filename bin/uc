@@ -8,7 +8,10 @@ require 'optparse'
 require 'uc/error'
 require 'uc/version'
 require 'uc/server'
+require 'uc/logger'
+require 'uc/lock'
 
+logger = ::Uc::Logger.logger
 options = {}
 options[:rails_env] = "production"
 
@@ -38,6 +41,11 @@ opts_parser = OptionParser.new do |opts|
       exit
     end
 
+    opts.on("--debug", "Show debug messages") do
+      logger.level = ::Logger::DEBUG
+      ENV["UC_DEBUG"] = "true"
+    end
+
     opts.on_tail("-h", "--help", "Show this message") do 
       puts opts
       exit
@@ -46,8 +54,9 @@ end
 
 begin
   opts_parser.parse!(ARGV)
-
   app_dir = options[:app_dir] || Dir.pwd
+  lock = ::Uc::Lock.new(app_dir)
+  lock.acquire
   server = ::Uc::Server.new(app_dir, rails_env: options[:rails_env])
   command = ARGV.shift
 
@@ -55,14 +64,14 @@ begin
   when "start", "stop", "restart", "status"
     server.send command.to_sym
   when "rr", "rolling-restart"
-    server.rolling_restart ARGV.shift
+    server.rolling_restart
   when nil
-    puts "ERROR No command specified",""
+    logger.error "No command specified"
     puts opts_parser
     abort
   end
 
 rescue OptionParser::InvalidOption, OptionParser::MissingArgument, ::Uc::Error => e
-  puts "ERROR #{e.message}"
+  logger.error "#{e.message}"
   abort
 end

@@ -1,7 +1,7 @@
 require 'pathname'
 require 'uc/logger'
-module Uc
-  class UnicornConfig
+module Uc; module Unicorn
+  class Config
 
     include ::Uc::Logger  
 
@@ -43,6 +43,10 @@ module Uc
       return -1
     end
 
+    def pid
+      @pid ||= read_pid
+    end
+
     def check_dirs
       logger.debug "Using app_dir => #{app_dir}"
       raise ::Uc::Error, %{app_dir not readable} if not path_readable? app_dir
@@ -57,6 +61,12 @@ module Uc
       @dirs_checked
     end
 
+    def load_env
+      env_file = rpath "config/uc_env.rb"
+      File.readable? env_file and
+        load env_file
+    rescue LoadError
+    end
 
     private 
 
@@ -66,14 +76,11 @@ module Uc
       "#{app_dir}/#{path}"
     end
 
-    def rpathname(path)
-      Pathname.new(rpath(path))
-    end
-  
     def path_readable?(path_str)
       path = Pathname.new(path_str)
       path.readable?
     end
 
+
   end
-end
+end; end
