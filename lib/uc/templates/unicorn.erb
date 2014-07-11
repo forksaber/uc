@@ -1,0 +1,41 @@
+require 'uc/unicorn/api'
+uc = ::Uc::Unicorn::Api.new
+
+worker_processes <%= config.fetch :instances %>
+working_directory "<%= paths.app_dir %>"
+timeout <%= config.fetch :timeout %>
+listen "<%= paths.socket %>" , :backlog => <%= config.fetch :queue_size %>
+pid "<%= paths.pid_file %>"
+stdout_path "<%= paths.stdout_log %>"
+stderr_path "<%= paths.stderr_log %>"
+
+preload_app true
+
+GC.respond_to?(:copy_on_write_friendly=) and
+  GC.copy_on_write_friendly = true
+
+check_client_connection false
+
+before_fork do |server, worker|
+
+  defined?(ActiveRecord::Base) and
+    ActiveRecord::Base.connection.disconnect!
+
+  if defined?(Resque)
+    Resque.redis.quit
+    Rails.logger.info('Disconnected from Redis')
+  end
+
+  uc.rolling_restart(server, worker, prestart_wait: <%= config.fetch :prestart_wait %>)
+end
+
+after_fork do |server, worker|
+  defined?(ActiveRecord::Base) and
+    ActiveRecord::Base.establish_connection
+
+  uc.prestart server, worker, url: "<%= config.fetch :prestart_url %>"
+end
+
+before_exec do |server|
+  uc.clean_env
+end

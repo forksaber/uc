@@ -42,8 +42,8 @@ opts_parser = OptionParser.new do |opts|
     end
 
     opts.on("--debug", "Show debug messages") do
+      options[:debug] = true
       logger.level = ::Logger::DEBUG
-      ENV["UC_DEBUG"] = "true"
     end
 
     opts.on_tail("-h", "--help", "Show this message") do 
@@ -55,8 +55,6 @@ end
 begin
   opts_parser.parse!(ARGV)
   app_dir = options[:app_dir] || Dir.pwd
-  lock = ::Uc::Lock.new(app_dir)
-  lock.acquire
   server = ::Uc::Server.new(app_dir, rails_env: options[:rails_env])
   command = ARGV.shift
 
@@ -69,9 +67,16 @@ begin
     logger.error "No command specified"
     puts opts_parser
     abort
+  else
+    logger.error "No such command #{command}"
+    abort
   end
 
 rescue OptionParser::InvalidOption, OptionParser::MissingArgument, ::Uc::Error => e
-  logger.error "#{e.message}"
-  abort
+  if options[:debug]
+    raise e
+  else
+    logger.error "#{e.message}"
+    abort
+  end
 end

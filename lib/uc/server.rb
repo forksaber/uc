@@ -1,57 +1,49 @@
 require 'uc/logger'
 require 'uc/shell_helper'
+require 'uc/config'
+require 'uc/status'
 require 'uc/mqueue'
 require 'uc/unicorn/api'
 require 'uc/unicorn/config'
+require 'uc/unicorn/paths'
 require 'uc/error'
+require 'uc/paths'
 
 module Uc
-
   class Server
 
     include ::Uc::ShellHelper
     include ::Uc::Logger
 
-    attr_reader :uconfig
-    attr_reader :rails_env
+    attr_reader :paths, :rails_env, :app_dir
 
     def initialize(app_dir, rails_env: "production")
-      @uconfig = ::Uc::Unicorn::Config.new(app_dir)
+      @app_dir = app_dir
       @rails_env = rails_env
-      @uconfig.load_env
-    end
-
-    def app_env(&block)
-      uconfig.dirs_checked? || uconfig.check_dirs
-      yield if block
     end
 
     def start 
-      app_env do
-        if server_running?
-          logger.info "unicorn already running pid #{pid}"
-          return
-        end
-
-        cmd %{unicorn -c #{uconfig.config_path} -D -E #{rails_env} }, return_output: false,
-          error_msg: "error starting unicorn"
+      init_once
+      if server_status.running?
+        logger.info "unicorn already running pid #{pid}"
+        return
       end
+
+      cmd %{unicorn -c #{uconfig.path} -D -E #{rails_env} }, return_output: false,
+      error_msg: "error starting unicorn"
     end
 
     def stop
-      app_env do
-        if not server_running?
-          puts "unicorn not running"
-          return
-        end
-
-        kill(pid, 30)
+      init_once
+      if server_status.stopped?
+        logger.info "unicorn not running"
+        return
       end
+      kill(pid, 30)
     end
 
     def status
-      status = ( server_running? ? "Running pid #{pid}" : "Stopped")  
-      puts status
+      puts server_status
     end
 
     def restart
@@ -60,7 +52,7 @@ module Uc
     end
 
     def rolling_restart
-      app_env
+      init_once
       if not server_running?
         start
         return
@@ -81,44 +73,45 @@ module Uc
 
     private
 
-    def kill(pid, timeout)
-      Process.kill(:TERM, pid)
-      logger.debug "TERM signal sent to #{pid}"
-      (1..timeout).each do
-        if not process_running? pid
-          logger.info "Stopped #{pid}"
-          return
-        end
-        sleep 1
-      end
-      Process.kill(9, pid)
-      sleep 1
-      logger.info "Killed #{pid}"
-    end
-
-
-    def process_running?(pid)
-      return false if pid <= 0
-      Process.getpgid pid
-      return true
-    rescue Errno::ESRCH
-        return false
-    end
-
-    def server_running?
-      process_running? pid
-    end
-
-    def pid
-      uconfig.pid
-    end
-
     def queue_name
-      @queue_name ||= Dir.chdir uconfig.app_dir do
+      @queue_name ||= Dir.chdir paths.app_dir do
         api = ::Uc::Unicorn::Api.new
         api.queue_name
       end
     end
 
-  end
+    def server_status
+      @server_status ||= ::Uc::Status.new(unicorn_paths)
+    end
+
+    def paths
+      @paths ||= ::Uc::Paths.new(app_dir)
+    end
+
+    def config
+      @config ||= ::Uc::Config.new(paths.config)
+    end
+
+    def unicorn_paths
+      @unicorn_paths ||= ::Uc::Unicorn::Paths.new(config.app_dir)
+    end
+
+    def uconfig
+      @uconfig ||= ::Uc::Unicorn::Config.new(config.to_h, unicorn_paths)
+    end
+
+    def lock
+      @lock ||= ::Uc::Lock.new(app_dir)
+    end
+
+    def init
+      paths.validate_required
+      lock.acquire
+    end
+
+    def init_once
+      @init_once ||= init
+    end
+
+  end   
 end

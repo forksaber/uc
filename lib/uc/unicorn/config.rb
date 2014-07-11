@@ -1,86 +1,38 @@
-require 'pathname'
 require 'uc/logger'
-module Uc; module Unicorn
-  class Config
+require 'uc/error'
+require 'erb'
 
-    include ::Uc::Logger  
+module Uc
+  module Unicorn
 
-    attr_reader :app_dir
+    class Config
 
-    def initialize(app_dir)
-      @app_dir = app_dir
-    end
+      include ::Uc::Logger  
 
-    def config_path
-      rpath "config/unicorn.rb"
-    end
+      attr_reader :paths, :config
 
-
-    def stdout_log
-      rpath "log/unicorn.stdout.log"
-    end
-
-    def stderr_log
-      rpath "log/unicorn.stderr.log"
-    end
-
-    def socket_file
-      rpath "tmp/sockets/unicorn.sock"
-    end
-
-    def pid_file
-      rpath "tmp/pids/unicorn.pid"
-    end
-
-    def rack_path
-      rpath "config.ru"
-    end
-
-    def read_pid
-      pid = (File.read pid_file).to_i
-      pid == 0 ? -1 : pid
-    rescue
-      return -1
-    end
-
-    def pid
-      @pid ||= read_pid
-    end
-
-    def check_dirs
-      logger.debug "Using app_dir => #{app_dir}"
-      raise ::Uc::Error, %{app_dir not readable} if not path_readable? app_dir
-      Dir.chdir app_dir do
-        raise ::Uc::Error, %{no config.ru found in app_dir} if not path_readable? rack_path
-        raise ::Uc::Error, %{no unicorn config found %} if not path_readable? config_path
+      def initialize(config_hash, paths)
+        @config = config_hash
+        @paths = paths
       end
-      @dirs_checked = true
-    end
-  
-    def dirs_checked?
-      @dirs_checked
-    end
 
-    def load_env
-      env_file = rpath "config/uc_env.rb"
-      File.readable? env_file and
-        load env_file
-    rescue LoadError
-    end
+      def path
+        @config_generated ||= generate_config_file
+        paths.unicorn_config
+      end
 
-    private 
-
-    def rpath(path)
-      path = Pathname.new(path)
-      raise "absolute path specified: #{path}" if path.absolute?
-      "#{app_dir}/#{path}"
+      def generate_config_file
+        erb = ERB.new(File.read(paths.unicorn_template))
+        binding = Kernel.binding
+        File.open(paths.unicorn_config, 'w') do |f|
+          f.write erb.result(binding)
+        end 
+        return true
+      rescue => e
+        logger.debug e.message
+        raise ::Uc::Error, "unable to generate unicorn config"
+      end
     end
 
-    def path_readable?(path_str)
-      path = Pathname.new(path_str)
-      path.readable?
-    end
-
-
-  end
-end; end
+  end 
+end

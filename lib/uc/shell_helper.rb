@@ -15,5 +15,29 @@ module Uc
       return output
     end 
 
+    def kill(pid, timeout)
+      Process.kill(:TERM, pid)
+      logger.debug "TERM signal sent to #{pid}"
+      (1..timeout).each do
+        if not process_running? pid
+          logger.info "Stopped #{pid}"
+          return
+        end
+        sleep 1
+      end
+      Process.kill(9, pid)
+      sleep 1
+      logger.info "Killed #{pid}"
+    end
+
+    def process_running?(pid)
+      return false if pid <= 0
+      Process.getpgid pid
+      return true
+    rescue Errno::ESRCH
+        return false
+    end
+
+
   end 
 end
