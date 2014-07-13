@@ -1,8 +1,12 @@
 require 'logger'
-require 'uc/mq_logger'
+require 'uc/event_stream'
 module Uc
   module Logger
-   
+
+    class << self
+      attr_accessor :event_queue
+    end
+
     def self.logger
       @logger ||= begin
         logger = ::Logger.new(STDOUT)
@@ -18,15 +22,17 @@ module Uc
       end
     end
 
+    def self.event_stream
+      @event_stream ||= ::Uc::EventStream.new(event_queue)
+    end
+
+    def event_stream
+      ::Uc::Logger.event_stream
+    end
+
     def logger
       ::Uc::Logger.logger
     end
-
-    def mq_log(msg)
-      return if not respond_to? :queue_name
-      @mq_logger ||= ::Uc::MqLogger.new(queue_name)
-      @mq_logger.log msg 
-    end 
 
   end
 end

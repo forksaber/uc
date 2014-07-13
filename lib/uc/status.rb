@@ -39,7 +39,6 @@ module Uc
     end
 
     def read_pid
-      puts paths.pid_file
       pid = (File.read paths.pid_file).to_i
       pid == 0 ? -1 : pid
     rescue

@@ -1,6 +1,7 @@
 require 'uc/unicorn/rolling_restart'
 require 'uc/unicorn/prestart'
 require 'securerandom'
+require 'uc/logger'
 
 module Uc; module Unicorn
  
@@ -10,6 +11,7 @@ module Uc; module Unicorn
 
     def initialize
       @run_id = SecureRandom.hex(3)
+      ::Uc::Logger.event_queue = queue_name
     end
 
     def rolling_restart(server, worker, **kwargs)
@@ -23,6 +25,11 @@ module Uc; module Unicorn
       prestart = ::Uc::Unicorn::Prestart.new(server, worker, queue_name, **kwargs)
       prestart.run_id = @run_id
       prestart.run
+    end
+
+    def acquire_shared_lock(lock_file)
+      shared_lock = ::Uc::Unicorn::Lock.new(lock_file)
+      shared_lock.acquire
     end
 
     def clean_env

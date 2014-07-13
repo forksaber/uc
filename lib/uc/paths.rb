@@ -12,10 +12,6 @@ module Uc
       @app_dir = Pathname.new(app_dir )
     end
 
-    def config
-      rpath "config/uc.rb"
-    end
-
     def rack
       rpath "config.ru"
     end
@@ -69,20 +65,10 @@ module Uc
     
     private
 
-    def dir_writable?(path_str)
-      path = Pathname.new(path_str)
-      path.writable? and path.directory?
-    end
-
     def rpath(path)
       path = Pathname.new(path)
       raise "absolute path specified: #{path}" if path.absolute?
       "#{app_dir}/#{path}"
-    end
-
-    def path_readable?(path_str)
-      path = Pathname.new(path_str)
-      path.readable?
     end
 
   end

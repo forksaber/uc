@@ -24,7 +24,9 @@ module Uc; module Unicorn;
     def run
       response = app.call(rack_request)
       body = response[2]
-      body.close
+      if body.is_a? Rack::BodyProxy
+        body.close
+      end
       end_prestart
     rescue => e
       logger.warn "pre start failed for worker : #{e.message}"
@@ -47,13 +49,13 @@ module Uc; module Unicorn;
 
     def end_prestart
       if last_worker?
-        logger.debug "[ps] no_event #{worker_id}"
+        logger.info "[ps] no_event #{worker_id}"
         return
       end
-      logger.debug "[ps] start #{worker_id}"
+      logger.info "[ps] start #{worker_id}"
       send_prestart_end
-      mq_log "prestart end worker #{worker_id}"
-      logger.debug "[ps] end #{worker_id}"
+      event_stream.info "prestart end worker #{worker_id}"
+      logger.info "[ps] end #{worker_id}"
     end
 
     def send_prestart_end

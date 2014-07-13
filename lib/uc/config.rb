@@ -1,10 +1,13 @@
 module Uc
   class Config
 
-    attr_reader :config_file
-
-    def initialize(config_file)
+    def initialize(app_dir, config_file = nil)
       @config_file = config_file
+      @app_dir = app_dir
+    end
+
+    def config_file
+      @config_file ||= "#{app_dir}/config/uc.rb"
     end
 
     def config
@@ -15,7 +18,8 @@ module Uc
         timeout: 30,
         prestart_wait: 5,
         prestart_url: "/",
-        working_dir: Dir.pwd,
+        working_dir: @app_dir,
+        event_queue: "unicorn_#{Process.uid}",
         before_fork: nil
       }
       read_from_file
@@ -24,6 +28,10 @@ module Uc
 
     def to_h
       config
+    end
+
+    def event_queue_name
+      config[:event_queue]
     end
 
     def instances(num_instances)
@@ -48,6 +56,10 @@ module Uc
 
     def working_dir
       config[:working_dir] = working_dir
+    end
+
+    def event_queue(event_queue)
+      config[:event_queue] = event_queue
     end
 
     def app_dir

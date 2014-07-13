@@ -2,8 +2,6 @@ require 'uc/logger'
 require 'uc/shell_helper'
 require 'uc/config'
 require 'uc/status'
-require 'uc/mqueue'
-require 'uc/unicorn/api'
 require 'uc/unicorn/config'
 require 'uc/unicorn/paths'
 require 'uc/error'
@@ -39,7 +37,7 @@ module Uc
         logger.info "unicorn not running"
         return
       end
-      kill(pid, 30)
+      kill(server_status.pid, 30)
     end
 
     def status
@@ -53,14 +51,13 @@ module Uc
 
     def rolling_restart
       init_once
-      if not server_running?
+      if not server_status.running?
         start
         return
       end
-      mq = ::Uc::Mqueue.new(queue_name)
       begin
-        mq.watch :fin do
-          Process.kill("USR2", pid)
+        event_stream.watch :fin do
+          Process.kill("USR2", server_status.pid)
         end
       rescue Errno::EACCES
         raise ::Uc::Error, "unable to setup message queue"
@@ -73,13 +70,6 @@ module Uc
 
     private
 
-    def queue_name
-      @queue_name ||= Dir.chdir paths.app_dir do
-        api = ::Uc::Unicorn::Api.new
-        api.queue_name
-      end
-    end
-
     def server_status
       @server_status ||= ::Uc::Status.new(unicorn_paths)
     end
@@ -89,7 +79,7 @@ module Uc
     end
 
     def config
-      @config ||= ::Uc::Config.new(paths.config)
+      @config ||= ::Uc::Config.new(app_dir)
     end
 
     def unicorn_paths
@@ -107,6 +97,7 @@ module Uc
     def init
       paths.validate_required
       lock.acquire
+      ::Uc::Logger.event_queue = config.event_queue_name
     end
 
     def init_once

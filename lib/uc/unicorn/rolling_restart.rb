@@ -61,8 +61,8 @@ module Uc; module Unicorn
     def kill_old_worker
       sig = (worker.nr + 1) >= server.worker_processes ? :QUIT : :TTOU
       Process.kill(sig, File.read(old_pid).to_i)
-      mq_log "starting worker #{worker.nr + 1}"
-      mq_log "fin" if sig == :QUIT
+      event_stream.info "starting worker #{worker.nr + 1}"
+      event_stream.pub "fin", "restart successful" if sig == :QUIT
     rescue Errno::ENOENT, Errno::ESRCH, Errno::EAGAIN, Errno::EACCES => e
       logger.error "rolling restart #{e.class} #{e.message}"
     end
