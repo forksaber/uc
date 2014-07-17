@@ -14,12 +14,13 @@ module Uc
       return @config if @config
       @config = {
         instances: 2,
-        queue_size: 128,
+        queue_size: 1024,
         timeout: 30,
         prestart_wait: 5,
         prestart_url: "/",
         working_dir: @app_dir,
         event_queue: "unicorn_#{Process.uid}",
+        ready_wait: 5,
         before_fork: nil
       }
       read_from_file
@@ -30,16 +31,16 @@ module Uc
       config
     end
 
+    def ready_wait(wait_timeout)
+      config[:ready_wait] = wait_timeout.to_i
+    end
+
     def event_queue_name
       config[:event_queue]
     end
 
     def instances(num_instances)
       config[:instances] = num_instances
-    end
-
-    def prestart_wait(wait_time)
-      config[:prestart_wait] = wait_time
     end
 
     def backlog(queue_size)

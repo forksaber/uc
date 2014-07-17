@@ -62,6 +62,11 @@ module Uc
       end
     end
 
+    def print_config
+      init_once
+      config.to_h.each { |k,v| puts "#{k} #{v}" }
+    end
+
     private
 
     def server_status

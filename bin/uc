@@ -59,7 +59,7 @@ begin
   command = ARGV.shift
 
   case command
-  when "start", "stop", "restart", "status"
+  when "start", "stop", "restart", "status", "print_config"
     server.send command.to_sym
   when "rr", "rolling-restart"
     server.rolling_restart

@@ -8,7 +8,7 @@ pid "<%= paths.pid_file %>"
 stdout_path "<%= paths.stdout_log %>"
 stderr_path "<%= paths.stderr_log %>"
 
-ready_wait = 5
+ready_wait = <%= config.fetch :ready_wait %>
 
 preload_app true
 
