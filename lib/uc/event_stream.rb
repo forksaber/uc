@@ -14,7 +14,6 @@ module Uc
 
     def initialize(queue_name)
       @queue_name = queue_name
-      @debug_output = true
     end
 
     def info(msg)

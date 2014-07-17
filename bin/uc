@@ -55,7 +55,7 @@ end
 begin
   opts_parser.parse!(ARGV)
   app_dir = options[:app_dir] || Dir.pwd
-  server = ::Uc::Server.new(app_dir, rails_env: options[:rails_env])
+  server = ::Uc::Server.new(app_dir, rails_env: options[:rails_env], debug: options[:debug])
   command = ARGV.shift
 
   case command

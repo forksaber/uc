@@ -15,9 +15,10 @@ module Uc
 
     attr_reader :paths, :rails_env, :app_dir
 
-    def initialize(app_dir, rails_env: "production")
+    def initialize(app_dir, rails_env: "production", debug: false)
       @app_dir = app_dir
       @rails_env = rails_env
+      @debug = debug
     end
 
     def start 
@@ -97,6 +98,7 @@ module Uc
       paths.validate_required
       lock.acquire
       ::Uc::Logger.event_queue = config.event_queue_name
+      event_stream.debug_output = true if @debug
     end
 
     def init_once
