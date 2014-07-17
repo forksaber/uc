@@ -17,7 +17,7 @@ module Uc
       end
 
       def path
-        @config_generated ||= generate_config_file
+        generate_once
         paths.unicorn_config
       end
 
@@ -32,6 +32,14 @@ module Uc
         logger.debug e.message
         raise ::Uc::Error, "unable to generate unicorn config"
       end
+
+      def generate_once
+        return if @config_generated
+        generate_config_file
+        @config_generated = true
+      end
+
+
     end
 
   end 

@@ -23,12 +23,11 @@ module Uc
     def start 
       init_once
       if server_status.running?
-        logger.info "unicorn already running pid #{pid}"
+        puts server_status
         return
       end
-
       cmd %{unicorn -c #{uconfig.path} -D -E #{rails_env} }, return_output: false,
-      error_msg: "error starting unicorn"
+          error_msg: "error starting unicorn"
     end
 
     def stop
@@ -51,20 +50,13 @@ module Uc
 
     def rolling_restart
       init_once
+      uconfig.generate_once
       if not server_status.running?
         start
         return
       end
-      begin
-        event_stream.watch :fin do
-          Process.kill("USR2", server_status.pid)
-        end
-      rescue Errno::EACCES
-        raise ::Uc::Error, "unable to setup message queue"
-      rescue Errno::ENOENT
-        raise ::Uc::Error, "message queue deleted"
-      rescue Errno::ETIMEDOUT
-        raise ::Uc::Error, "timeout reached while waiting for server to restart"
+      event_stream.watch :fin do
+        Process.kill("USR2", server_status.pid)
       end
     end
 
