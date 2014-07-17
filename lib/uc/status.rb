@@ -10,7 +10,6 @@ module Uc
 
     def initialize(unicorn_paths)
       @paths =  unicorn_paths
-      @use_pid = true
     end
 
     def running?
