@@ -10,9 +10,11 @@ module Uc
   class EventStream
 
     attr_reader :queue_name
+    attr_accessor :debug_output
 
     def initialize(queue_name)
       @queue_name = queue_name
+      @debug_output = true
     end
 
     def info(msg)
@@ -23,10 +25,27 @@ module Uc
       pub :debug, msg
     end
 
+    def warn(msg)
+      pub :warn, msg
+    end
+
+    def fatal(msg)
+      pub :fatal, msg
+    end
+
     def pub(type, msg)
-      writer.send "#{type}|#{msg}"
+      tmsg = truncate "#{type}|#{msg}"
+      writer.send tmsg
     rescue Errno::ENOENT, Errno::EAGAIN, Errno::EACCES, Errno::EMSGSIZE => e
       puts "#{e.class} #{e.message}"
+    end
+
+    def truncate(msg)
+      if msg.size <= mq.msg_size
+        return msg
+      else
+        msg = "#{msg[0, mq.msg_size - 3] }..."
+      end
     end
 
     def watch(event_type, timeout: 30, recreate: true, &block)
@@ -34,6 +53,12 @@ module Uc
       mq.clear
       yield
       wait(event_type, timeout, output: true)
+    rescue Errno::EACCES
+      raise ::Uc::Error, "unable to setup message queue"
+    rescue Errno::ENOENT
+      raise ::Uc::Error, "message queue deleted"
+    rescue Errno::ETIMEDOUT
+      raise ::Uc::Error, "timeout reached while waiting for server to restart"
     end
 
     def wait(event_type, timeout, output: false)
@@ -56,8 +81,12 @@ module Uc
       case event.type
       when "info"
         puts event.msg
+      when "warn"
+        puts "#{"warn".yellow.bold} #{event.msg}"
       when "debug"
-        puts "debug".bold, event.msg if debug
+        puts "#{"debug".blue.bold} #{event.msg}" if debug_output
+      when "fatal"
+        raise ::Uc::Error, event.msg
       end
     end
 
