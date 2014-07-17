@@ -1,6 +1,5 @@
 require 'uc/unicorn/api'
-uc = ::Uc::Unicorn::Api.new
-
+uc = ::Uc::Unicorn::Api.new("<%= config.fetch :event_queue %>")
 worker_processes <%= config.fetch :instances %>
 working_directory "<%= paths.app_dir %>"
 timeout <%= config.fetch :timeout %>
@@ -8,6 +7,8 @@ listen "<%= paths.socket %>" , :backlog => <%= config.fetch :queue_size %>
 pid "<%= paths.pid_file %>"
 stdout_path "<%= paths.stdout_log %>"
 stderr_path "<%= paths.stderr_log %>"
+
+ready_wait = 5
 
 preload_app true
 
@@ -18,6 +19,8 @@ check_client_connection false
 
 before_fork do |server, worker|
 
+  uc.init(server)
+
   defined?(ActiveRecord::Base) and
     ActiveRecord::Base.connection.disconnect!
 
@@ -26,14 +29,18 @@ before_fork do |server, worker|
     Rails.logger.info('Disconnected from Redis')
   end
 
-  uc.rolling_restart(server, worker, prestart_wait: <%= config.fetch :prestart_wait %>)
+  uc.wait_for_worker_ready(server, worker, ready_wait: ready_wait)
+  uc.gradual_shutdown(server, worker)
+  sleep 0.3
 end
 
 after_fork do |server, worker|
   defined?(ActiveRecord::Base) and
     ActiveRecord::Base.establish_connection
-
+    
   uc.prestart server, worker, url: "<%= config.fetch :prestart_url %>"
+  uc.send_worker_ready server, worker, ready_wait: ready_wait
+  uc.end_run worker
 end
 
 before_exec do |server|
