@@ -53,21 +53,34 @@ module Uc
       mq.clear
       yield
       wait(event_type, timeout, output: true)
-    rescue Errno::EACCES
-      raise ::Uc::Error, "unable to setup message queue"
-    rescue Errno::ENOENT
-      raise ::Uc::Error, "message queue deleted"
-    rescue Errno::ETIMEDOUT
-      raise ::Uc::Error, "timeout reached while waiting for server to restart"
+    rescue => e
+      raise uc_error(e)
     end
 
-    def wait(event_type, timeout, output: false)
+    def watch_in_background(event_type, timeout: 30, recreate: true, &block)
+      begin
+        mq.recreate if recreate
+        mq.clear
+        t = wait_in_background(event_type, timeout, output: true, first_timeout: 50)
+        yield
+        t.join
+        raise t[:error] if t[:error]
+      rescue => e
+        raise uc_error(e)
+      ensure
+        t.kill if t
+      end
+    end
+
+    def wait(event_type, timeout, output: false, first_timeout: nil)
       event_type = event_type.to_s
       message = ""
       event = ""
+      t = first_timeout || timeout
       mq.reader do |r|
         loop do
-          r.receive(message, timeout)
+          r.receive(message, t)
+          t = timeout
           event = parse message
           print event if output
           break if event.type == event_type
@@ -75,6 +88,17 @@ module Uc
       end
       puts "#{"success".green.bold} #{event.msg}"
       true
+    end
+
+    def wait_in_background(event_type, timeout, **kwargs)
+      Thread.new do
+        begin
+          wait(event_type, timeout, **kwargs)
+        rescue => e
+          Thread.current[:error] = e
+          false
+        end
+      end
     end
 
     def print(event)
@@ -116,6 +140,21 @@ module Uc
 
     def writer
       @writer ||= mq.nb_writer
+    end
+
+    def uc_error(e)
+      case e
+      when Errno::EACCES
+        msg = "unable to setup message queue"
+      when Errno::ENOENT
+        msg = "message queue deleted"
+      when Errno::ETIMEDOUT
+        msg = "timeout reached while waiting for server ready msg"
+      else
+        return e
+      end
+
+      return ::Uc::Error.new(msg)
     end
 
   end

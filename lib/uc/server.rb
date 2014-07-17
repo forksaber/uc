@@ -26,8 +26,10 @@ module Uc
         puts server_status
         return
       end
-      cmd %{unicorn -c #{uconfig.path} -D -E #{rails_env} }, return_output: false,
+      event_stream.watch_in_background :fin do
+        cmd %{unicorn -c #{uconfig.path} -D -E #{rails_env} }, return_output: false,
           error_msg: "error starting unicorn"
+      end
     end
 
     def stop

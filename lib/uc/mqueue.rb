@@ -4,7 +4,7 @@ module Uc
  
     attr_reader :name, :max_msg, :msg_size
 
-    def initialize(name, max_msg: 10, msg_size: 100)
+    def initialize(name, max_msg: 15, msg_size: 70)
       @name = name
       @max_msg = max_msg
       @msg_size = msg_size
