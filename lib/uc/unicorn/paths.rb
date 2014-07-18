@@ -44,8 +44,6 @@ module Uc
       private
 
      def rpath(path)
-        path = Pathname.new(path)
-        raise "absolute path specified: #{path}" if path.absolute?
         "#{app_dir}/#{path}"
       end
 

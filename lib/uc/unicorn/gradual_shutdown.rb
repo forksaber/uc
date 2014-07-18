@@ -23,14 +23,27 @@ module Uc
       end
 
       def shutdown_old_master
-        sig = (worker.nr + 1) >= server.worker_processes ? :QUIT : :TTOU
         event_stream.debug "stopping old worker #{id}"
-        Process.kill(sig, File.read(old_pid).to_i)
-        event_stream.debug "stopped old worker #{id}"
+        if send_signal
+          event_stream.debug "stopped old worker #{id}"
+        end
+      end
 
-      rescue Errno::ENOENT, Errno::ESRCH, Errno::EAGAIN, Errno::EACCES => e
+      def sig
+        (worker.nr + 1) >= server.worker_processes ? :QUIT : :TTOU
+      end
+
+      def send_signal
+        Process.kill(sig, File.read(old_pid).to_i)
+        return true
+      rescue => e
+        log_kill_error e
+        return false
+      end
+
+      def log_kill_error(e)
+        stderr.info "error sending kill signal #{id}| #{e.class} #{e.message}"
         event_stream.warn "error while stopping worker #{worker.nr + 1}, #{e.class}"
-        logger.info "shutdown_error id #{id}| #{e.class} #{e.message}"
       end
 
       def id
