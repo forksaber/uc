@@ -1,10 +1,6 @@
-require 'uc/config'
 require 'uc/ext/string'
 require 'uc/mqueue'
-
-module Uc
-  Event = Struct.new(:type, :msg)
-end
+require 'uc/event'
 
 module Uc
   class EventStream

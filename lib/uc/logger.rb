@@ -1,4 +1,5 @@
 require 'logger'
+require 'uc/custom_logger'
 require 'uc/event_stream'
 module Uc
   module Logger
@@ -13,21 +14,7 @@ module Uc
     end
 
     def self.logger
-      @logger ||= begin
-        logger = ::Logger.new(STDOUT)
-        logger.formatter = proc do |severity, datetime, progname, msg|
-          case severity
-          when "INFO"
-            "#{msg}\n"
-          when "ERROR"
-            "#{severity.downcase.bold.red} #{msg}\n"
-          else
-            "#{severity.downcase.bold.blue} #{msg}\n"
-          end
-        end
-        logger.level = ::Logger::INFO
-        logger
-      end
+      @logger ||= ::Uc::CustomLogger.new(STDERR)
     end
 
     def self.stderr

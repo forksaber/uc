@@ -1,5 +1,9 @@
+require 'uc/logger'
+
 module Uc
   class Config
+
+    include ::Uc::Logger
 
     def initialize(app_dir, config_file = nil)
       @config_file = config_file
@@ -76,9 +80,10 @@ module Uc
     end
     
     def read_from_file
-      return true if not File.readable? config_file
+      return if not File.readable? config_file
       instance_eval(File.read(config_file))
-      return true
+    rescue NoMethodError => e
+      logger.warn "invalid option used in config: #{e.name}"
     end
 
   end
