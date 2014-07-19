@@ -1,0 +1,45 @@
+[1mdiff --git a/lib/unicorn/configurator.rb b/lib/unicorn/configurator.rb[m
+[1mindex 9406223..3ed9cbd 100644[m
+[1m--- a/lib/unicorn/configurator.rb[m
+[1m+++ b/lib/unicorn/configurator.rb[m
+[36m@@ -171,6 +171,10 @@[m [mclass Unicorn::Configurator[m
+     set_hook(:before_exec, block_given? ? block : args[0], 1)[m
+   end[m
+ [m
+[32m+[m[32m  def on_exec_fail(*args, &block)[m
+[32m+[m[32m    set_hook(:on_exec_fail, block_given? ? block : args[0], 1)[m
+[32m+[m[32m  end[m
+[32m+[m
+   # sets the timeout of worker processes to +seconds+.  Workers[m
+   # handling the request/app.call/response cycle taking longer than[m
+   # this time period will be forcibly killed (via SIGKILL).  This[m
+[1mdiff --git a/lib/unicorn/http_server.rb b/lib/unicorn/http_server.rb[m
+[1mindex a0ca302..4a1958d 100644[m
+[1m--- a/lib/unicorn/http_server.rb[m
+[1m+++ b/lib/unicorn/http_server.rb[m
+[36m@@ -14,6 +14,7 @@[m [mclass Unicorn::HttpServer[m
+   # :stopdoc:[m
+   attr_accessor :app, :request, :timeout, :worker_processes,[m
+                 :before_fork, :after_fork, :before_exec,[m
+[32m+[m[32m                :on_exec_fail, :on_exec_fail_safe,[m
+                 :listener_opts, :preload_app,[m
+                 :reexec_pid, :orig_app, :init_listeners,[m
+                 :master_pid, :config, :ready_pipe, :user[m
+[36m@@ -408,6 +409,7 @@[m [mclass Unicorn::HttpServer[m
+         self.reexec_pid = 0[m
+         self.pid = pid.chomp('.oldbin') if pid[m
+         proc_name 'master'[m
+[32m+[m[32m        on_exec_fail.call(self)[m
+       else[m
+         worker = WORKERS.delete(wpid) and worker.close rescue nil[m
+         m = "reaped #{status.inspect} worker=#{worker.nr rescue 'unknown'}"[m
+[36m@@ -810,4 +812,9 @@[m [mclass Unicorn::HttpServer[m
+     raise ArgumentError, "no listeners" if LISTENERS.empty?[m
+     NEW_LISTENERS.clear[m
+   end[m
+[32m+[m
+[32m+[m[32m  def on_exec_fail_safe[m
+[32m+[m[32m    on_exec_fail.call(self)[m
+[32m+[m[32m  rescue[m
+[32m+[m[32m  end[m
+ end[m

@@ -59,6 +59,12 @@ module Uc; module Unicorn
       @init.end_run(worker)
     end
 
+    def on_exec_fail
+      event_stream = ::Uc::Logger.event_stream
+      event_stream.close_connections
+      event_stream.fatal "re-exec failed"
+    end
+
     def clean_env
       ENV.delete "BUNDLE_BIN_PATH"
       ENV.delete "RUBYLIB"

@@ -109,6 +109,12 @@ module Uc
       end
     end
 
+    def close_connections
+      writer.close if writer
+      @writer = nil
+    end
+
+
     private  
 
     def read(timeout)
