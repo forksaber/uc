@@ -1,3 +1,4 @@
+require 'uc/config'
 require 'uc/unicorn/init'
 require 'uc/unicorn/gradual_shutdown'
 require 'uc/unicorn/prestart'
@@ -71,6 +72,11 @@ module Uc; module Unicorn
       ENV.delete "RUBYOPT"
       ENV.delete "GEM_HOME"
       ENV.delete "GEM_PATH"
+    end
+
+    def load_env
+      config = ::Uc::Config.new(Dir.pwd)
+      config.load_env
     end
 
   end

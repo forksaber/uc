@@ -14,7 +14,7 @@ module Uc
     end
 
     def self.logger
-      @logger ||= ::Uc::CustomLogger.new(STDERR)
+      @logger ||= ::Uc::CustomLogger.new(STDOUT)
     end
 
     def self.stderr

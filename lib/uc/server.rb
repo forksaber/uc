@@ -98,6 +98,7 @@ module Uc
       paths.validate_required
       lock.acquire
       ::Uc::Logger.event_queue = config.event_queue_name
+      config.load_env
       event_stream.debug_output = true if @debug
     end
 

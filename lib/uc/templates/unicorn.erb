@@ -45,6 +45,7 @@ end
 
 before_exec do |server|
   uc.clean_env
+  uc.load_env
 end
 
 if respond_to? :on_exec_fail

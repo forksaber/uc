@@ -78,6 +78,13 @@ module Uc
     def env(key, value)
       env_hash[key] = value
     end
+
+    def load_env
+      config
+      env_hash.each do |k,v|
+        ENV[k] = v
+      end
+    end
     
     def read_from_file
       return if not File.readable? config_file

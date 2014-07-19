@@ -2,7 +2,7 @@ module Uc
   module ShellHelper
 
     def cmd(command, error_msg: nil, return_output: false)
-      puts "Running #{command}"
+      puts "#{"Running".bold.green} #{command}"
       if return_output
         output = `#{command}`
       else
