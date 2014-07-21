@@ -43,7 +43,7 @@ module Uc
       end
     end
 
-    def watch(event_type, timeout: 30, recreate: true, &block)
+    def expect(event_type, timeout: 30, recreate: true, &block)
       mq.recreate if recreate
       mq.clear
       yield
@@ -52,7 +52,7 @@ module Uc
       raise uc_error(e)
     end
 
-    def watch_in_background(event_type, timeout: 30, recreate: true, &block)
+    def expect_in_background(event_type, timeout: 30, recreate: true, &block)
       begin
         mq.recreate if recreate
         mq.clear

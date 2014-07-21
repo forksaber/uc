@@ -51,8 +51,6 @@ end
 if respond_to? :on_exec_fail
   uc = uc
   on_exec_fail do |server|
-    puts "runnign asdadad"
     uc.on_exec_fail
-    puts "lol"
   end
 end

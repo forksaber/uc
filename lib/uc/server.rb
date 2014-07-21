@@ -27,7 +27,7 @@ module Uc
         puts server_status
         return
       end
-      event_stream.watch_in_background :fin do
+      event_stream.expect_in_background :fin do
         cmd %{unicorn -c #{uconfig.path} -D -E #{rails_env} }, return_output: false,
           error_msg: "error starting unicorn"
       end
@@ -58,14 +58,17 @@ module Uc
         start
         return
       end
-      event_stream.watch :fin do
+      event_stream.expect :fin do
         Process.kill("USR2", server_status.pid)
       end
     end
 
     def print_config
       init_once
-      config.to_h.each { |k,v| puts "#{k} #{v}" }
+      config.to_h.each do |k,v| 
+        v = %{ "#{v}" } if not v.is_a? Numeric
+        puts "#{k} #{v}" 
+      end
     end
 
     private
@@ -103,7 +106,10 @@ module Uc
     end
 
     def init_once
-      @init_once ||= init
+      @init_once ||= begin
+        init
+        true
+      end
     end
 
   end   

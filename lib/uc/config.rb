@@ -20,12 +20,10 @@ module Uc
         instances: 2,
         queue_size: 1024,
         timeout: 30,
-        prestart_wait: 5,
         prestart_url: "/",
         working_dir: @app_dir,
         event_queue: "unicorn_#{Process.uid}",
-        ready_wait: 5,
-        before_fork: nil
+        ready_wait: 5
       }
       read_from_file
       return @config
