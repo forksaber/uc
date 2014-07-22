@@ -52,6 +52,14 @@ module Uc; module Unicorn
       shared_lock.acquire
     end
 
+    def oom_adjust
+      pid = Process.pid
+      oom_file = "/proc/#{pid}/oom_score_adj"
+      File.open(oom_file,"w") do |f|
+        f.write "100"
+      end
+    end
+
     def shared_env
       @shared_env ||= {}
     end

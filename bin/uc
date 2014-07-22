@@ -52,9 +52,16 @@ opts_parser = OptionParser.new do |opts|
     end 
 end
 
+def chdir(app_dir)
+  Dir.chdir app_dir
+rescue
+  raise ::Uc::Error, "unable to chdir to app_dir"
+end
+
 begin
   opts_parser.parse!(ARGV)
   app_dir = options[:app_dir] || Dir.pwd
+  chdir app_dir
   server = ::Uc::Server.new(app_dir, rails_env: options[:rails_env], debug: options[:debug])
   command = ARGV.shift
 

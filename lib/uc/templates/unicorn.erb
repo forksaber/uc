@@ -35,6 +35,7 @@ before_fork do |server, worker|
 end
 
 after_fork do |server, worker|
+  uc.oom_adjust
   defined?(ActiveRecord::Base) and
     ActiveRecord::Base.establish_connection
     
