@@ -19,10 +19,9 @@ opts_parser = OptionParser.new do |opts|
     
     banner = [] 
     banner << "Usage: uc [options] command"
-    banner << ""
-    banner << "Commands: "
-    banner << "   start stop restart status "
-    banner << "   rolling-restart "
+    banner << "Commands: start, stop, restart, status, "
+    banner << "          rolling-restart, print-config "
+    banner << " "
 
     opts.banner = banner.join("\n")
 
@@ -32,7 +31,7 @@ opts_parser = OptionParser.new do |opts|
       options[:app_dir] = path
     end 
 
-    opts.on("-e", "--environment [RAILS_ENV]" , "Set rails env") do |e|
+    opts.on("-e", "--environment [RAILS_ENV]" , "Set rails env (default: production)") do |e|
       options[:rails_env] = e 
     end 
 
@@ -41,10 +40,21 @@ opts_parser = OptionParser.new do |opts|
       exit
     end
 
+    opts.on("--use-pid", "use pid instead of lock file to check server status") do
+      options[:use_pid] = true
+    end
+
     opts.on("--debug", "Show debug messages") do
       options[:debug] = true
       logger.level = ::Logger::DEBUG
     end
+
+    opts.on("--trace", "Show debug messages and exception stack trace") do
+      options[:debug] = true
+      options[:trace] = true
+      logger.level = ::Logger::DEBUG
+    end
+
 
     opts.on_tail("-h", "--help", "Show this message") do 
       puts opts
@@ -52,24 +62,20 @@ opts_parser = OptionParser.new do |opts|
     end 
 end
 
-def chdir(app_dir)
-  Dir.chdir app_dir
-rescue
-  raise ::Uc::Error, "unable to chdir to app_dir"
-end
-
 begin
   opts_parser.parse!(ARGV)
   app_dir = options[:app_dir] || Dir.pwd
-  chdir app_dir
   server = ::Uc::Server.new(app_dir, rails_env: options[:rails_env], debug: options[:debug])
+  server.use_pid = options[:use_pid]
   command = ARGV.shift
 
   case command
-  when "start", "stop", "restart", "status", "print_config"
+  when "start", "stop", "restart", "status"
     server.send command.to_sym
   when "rr", "rolling-restart"
     server.rolling_restart
+  when "print-config"
+    server.print_config
   when nil
     logger.error "No command specified"
     puts opts_parser
@@ -80,7 +86,7 @@ begin
   end
 
 rescue OptionParser::InvalidOption, OptionParser::MissingArgument, ::Uc::Error => e
-  if options[:debug]
+  if options[:trace]
     raise e
   else
     logger.error "#{e.message}"

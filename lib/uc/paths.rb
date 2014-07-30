@@ -46,8 +46,8 @@ module Uc
 
     def log_and_raise_errors
       if not errors.empty?
-        errors.each { |e| logger.error e }
-        raise ::Uc::Error, "exiting due to missing dirs/files"
+        errors.each { |e| logger.debug e }
+        raise ::Uc::Error, "#{errors.first}"
       end
     end
 

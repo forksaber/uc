@@ -14,6 +14,7 @@ module Uc
     include ::Uc::Logger
 
     attr_reader :paths, :rails_env, :app_dir
+    attr_accessor :use_pid
 
     def initialize(app_dir, rails_env: "production", debug: false)
       @app_dir = app_dir
@@ -43,6 +44,8 @@ module Uc
     end
 
     def status
+      paths.validate_required
+      Dir.chdir app_dir
       puts server_status
     end
 
@@ -74,7 +77,7 @@ module Uc
     private
 
     def server_status
-      @server_status ||= ::Uc::Status.new(unicorn_paths)
+      @server_status ||= ::Uc::Status.new(unicorn_paths, use_pid: use_pid)
     end
 
     def paths
@@ -99,6 +102,7 @@ module Uc
 
     def init
       paths.validate_required
+      Dir.chdir app_dir
       lock.acquire
       ::Uc::Logger.event_queue = config.event_queue_name
       config.load_env
