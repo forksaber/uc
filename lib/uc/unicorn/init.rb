@@ -34,7 +34,7 @@ module Uc
       end
 
       def acquire_lock
-        lock_acquired = File.new(lock_file, "a+").flock(File::LOCK_SH | File::LOCK_NB )
+        lock_acquired = lock_fd.flock(File::LOCK_SH | File::LOCK_NB )
        rescue => e
         stderr.error "#{e.class} #{e.message}\n #{e.backtrace.join("\n")}"
         return false
@@ -44,6 +44,10 @@ module Uc
        return if @ran_once
        @ran_once = true
        run
+      end
+
+      def lock_fd
+        @lock_fd ||= File.new(lock_file, "a+")
       end
 
       def end_run(worker)
