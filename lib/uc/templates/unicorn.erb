@@ -18,17 +18,7 @@ GC.respond_to?(:copy_on_write_friendly=) and
 check_client_connection false
 
 before_fork do |server, worker|
-
   uc.init(server)
-
-  defined?(ActiveRecord::Base) and
-    ActiveRecord::Base.connection.disconnect!
-
-  if defined?(Resque)
-    Resque.redis.quit
-    Rails.logger.info('Disconnected from Redis')
-  end
-
   uc.wait_for_worker_ready(server, worker, ready_wait: ready_wait)
   uc.gradual_shutdown(server, worker)
   sleep 0.3
@@ -39,6 +29,11 @@ after_fork do |server, worker|
   defined?(ActiveRecord::Base) and
     ActiveRecord::Base.establish_connection
     
+  if defined?(Resque)
+    Resque.redis.quit
+    Rails.logger.info('Disconnected from Redis')
+  end
+ 
   uc.prestart server, worker, url: "<%= config.fetch :prestart_url %>"
   uc.send_worker_ready server, worker, ready_wait: ready_wait
   uc.end_run worker
