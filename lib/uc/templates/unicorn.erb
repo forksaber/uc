@@ -30,8 +30,7 @@ after_fork do |server, worker|
     ActiveRecord::Base.establish_connection
     
   if defined?(Resque)
-    Resque.redis.quit
-    Rails.logger.info('Disconnected from Redis')
+    Resque.redis.client.reconnect
   end
  
   uc.prestart server, worker, url: "<%= config.fetch :prestart_url %>"
