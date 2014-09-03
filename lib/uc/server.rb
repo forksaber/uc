@@ -74,6 +74,13 @@ module Uc
       end
     end
 
+    def reopen_logs
+      init_once
+      return if not server_status.running?
+      Process.kill(:USR1 , server_status.pid)
+      puts "reopened logs"
+    end
+
     private
 
     def server_status
