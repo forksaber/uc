@@ -88,9 +88,11 @@ begin
   end
 
 rescue OptionParser::InvalidOption, OptionParser::MissingArgument, ::Uc::Error => e
+  cause = e.cause
   if options[:trace]
-    raise e
+    cause ? (raise cause) : (raise e)
   else
+    logger.debug "#{cause.message}" if cause
     logger.error "#{e.message}"
     abort
   end

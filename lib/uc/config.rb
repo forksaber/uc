@@ -1,4 +1,5 @@
 require 'uc/logger'
+require 'uc/error'
 
 module Uc
   class Config
@@ -57,7 +58,7 @@ module Uc
       config[:timeout] = secs
     end
 
-    def working_dir
+    def working_dir(working_dir)
       config[:working_dir] = working_dir
     end
 
@@ -77,13 +78,41 @@ module Uc
       env_hash[key] = value
     end
 
+    def env_yml(path, safe: false)
+      @skip_autoload = true
+      load_env_yml path, safe: safe
+    end
+
     def load_env
       config
+      if not @skip_autoload
+        load_env_yml "#{app_dir}/config/env.yml", safe: true, override: false
+      end
       env_hash.each do |k,v|
-        ENV[k] = v
+        ENV[k] = v.to_s
       end
     end
-    
+
+
+    def load_env_yml(path, safe: false, override: true)
+      if not File.readable? path
+        logger.debug "skipped loading env from #{path}"
+      end
+      require 'yaml'
+      h = YAML.load_file(path)
+      env_hash.merge!(h) do |key, v1, v2|
+        override ? v2 : v1
+      end
+      logger.debug "loaded env from #{path}"
+    rescue => e
+      error_message = "failed to load env from #{path}: #{e.message}"
+      if not safe
+        raise ::Uc::Error, error_message
+      else
+        logger.debug error_message
+      end
+    end
+
     def read_from_file
       return if not File.readable? config_file
       instance_eval(File.read(config_file))
