@@ -14,7 +14,7 @@ module Uc
       attr_reader :ready_wait, :server, :worker
 
 
-      def initialize(server, worker, run_id: nil, ready_wait: ready_wait)
+      def initialize(server, worker, run_id: nil, ready_wait: nil)
         @server = server
         @worker = worker
         @run_id = run_id
