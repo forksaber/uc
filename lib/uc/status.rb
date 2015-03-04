@@ -60,7 +60,7 @@ module Uc
 
     def fuser_pids
       @fuser_pids ||= begin
-        output = `fuser #{paths.lock_file} 2>/dev/null`
+        output = `#{fuser} #{paths.lock_file} 2>/dev/null`
         pids = output.strip.split.map { |pid| pid.to_i }
       end
     end
@@ -70,6 +70,14 @@ module Uc
         return true
       else
         fuser_pids.include?(pid_from_file)
+      end
+    end
+
+    def fuser
+      if File.exists? "/usr/sbin/fuser"
+        return "/usr/sbin/fuser"
+      else
+        return "fuser"
       end
     end
 
