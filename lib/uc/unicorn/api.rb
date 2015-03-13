@@ -11,7 +11,7 @@ module Uc; module Unicorn
  
   class Api
 
-    attr_reader :run_id
+    attr_reader :run_id, :original_env
     attr_accessor :queue_name
 
     def initialize(event_queue)
@@ -56,7 +56,7 @@ module Uc; module Unicorn
       pid = Process.pid
       oom_file = "/proc/#{pid}/oom_score_adj"
       File.open(oom_file,"w") do |f|
-        f.write "100"
+        f.write "800"
       end
     end
 
@@ -75,16 +75,35 @@ module Uc; module Unicorn
     end
 
     def clean_env
+      return if not File.exist? ".clean_env"
       ENV.delete "BUNDLE_BIN_PATH"
       ENV.delete "RUBYLIB"
       ENV.delete "RUBYOPT"
       ENV.delete "GEM_HOME"
       ENV.delete "GEM_PATH"
+      ENV.delete "BUNDLE_GEMFILE"
+      ENV["PATH"] = cleaned_path
     end
 
     def load_env
       config = ::Uc::Config.new(Dir.pwd)
       config.load_env
+    end
+
+    def cleaned_path
+      paths = (ENV["PATH"] || "").split(File::PATH_SEPARATOR)
+      paths.reject! { |x| x =~ /vendor\/bundle\/ruby/ }
+      paths.uniq.join(File::PATH_SEPARATOR)
+    end
+
+    def load_original_env
+      return if not @original_env.is_a? Hash
+      ENV.replace(@original_env)
+    end
+
+    def init_original_env
+      return if @original_env
+      @original_env = ENV.to_h
     end
 
   end

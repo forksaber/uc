@@ -1,5 +1,6 @@
 require 'uc/unicorn/api'
 uc = ::Uc::Unicorn::Api.new("<%= config.fetch :event_queue %>")
+uc.init_original_env
 worker_processes <%= config.fetch :instances %>
 working_directory "<%= paths.app_dir %>"
 timeout <%= config.fetch :timeout %>
@@ -39,6 +40,7 @@ after_fork do |server, worker|
 end
 
 before_exec do |server|
+  uc.load_original_env
   uc.clean_env
   uc.load_env
 end
