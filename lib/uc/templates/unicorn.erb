@@ -22,7 +22,7 @@ before_fork do |server, worker|
   uc.init(server)
   uc.wait_for_worker_ready(server, worker, ready_wait: ready_wait)
   uc.gradual_shutdown(server, worker)
-  sleep 0.3
+  sleep 0.2 if not ready_wait
 end
 
 after_fork do |server, worker|
