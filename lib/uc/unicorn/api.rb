@@ -75,7 +75,7 @@ module Uc; module Unicorn
     end
 
     def clean_env
-      return if not File.exist? ".clean_env"
+      return if config[:skip_clean_env]
       ENV.delete "BUNDLE_BIN_PATH"
       ENV.delete "RUBYLIB"
       ENV.delete "RUBYOPT"
@@ -86,7 +86,6 @@ module Uc; module Unicorn
     end
 
     def load_env
-      config = ::Uc::Config.new(Dir.pwd)
       config.load_env
     end
 
@@ -105,6 +104,10 @@ module Uc; module Unicorn
     def init_original_env
       return if @original_env
       @original_env = ENV.to_h
+    end
+
+    def config
+      @config ||= ::Uc::Config.new(Dir.pwd)
     end
 
   end

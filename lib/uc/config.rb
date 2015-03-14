@@ -70,6 +70,10 @@ module Uc
       config[:working_dir]
     end
 
+    def skip_clean_env(value)
+      config[:skip_clean_env] = value
+    end
+
     def env_hash
       @env_hash ||= {}
     end
