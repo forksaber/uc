@@ -29,7 +29,7 @@ module Uc
         return
       end
       ENV["UNICORN_APP_DIR"] = config.app_dir
-      event_stream.expect_in_background :fin do
+      event_stream.expect :fin do
         cmd %{unicorn -c #{uconfig.path} -D -E #{rails_env} }, return_output: false,
           error_msg: "error starting unicorn"
       end

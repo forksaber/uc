@@ -29,30 +29,13 @@ module Uc
     end
 
     def pub(type, msg)
-      tmsg = truncate "#{type}|#{msg}"
-      writer.send tmsg
+      event = Event.new(type, msg)
+      writer.send event.to_s(mq.msg_size)
     rescue Errno::ENOENT, Errno::EAGAIN, Errno::EACCES, Errno::EMSGSIZE => e
       puts "#{e.class} #{e.message}"
     end
 
-    def truncate(msg)
-      if msg.size <= mq.msg_size
-        return msg
-      else
-        msg = "#{msg[0, mq.msg_size - 3] }..."
-      end
-    end
-
     def expect(event_type, timeout: 30, recreate: true, &block)
-      mq.recreate if recreate
-      mq.clear
-      yield
-      wait(event_type, timeout, output: true)
-    rescue => e
-      raise uc_error(e)
-    end
-
-    def expect_in_background(event_type, timeout: 30, recreate: true, &block)
       begin
         mq.recreate if recreate
         mq.clear
@@ -76,7 +59,7 @@ module Uc
         loop do
           r.receive(message, t)
           t = timeout
-          event = parse message
+          event = Event.parse message
           print event if output
           break if event.type == event_type
         end
@@ -116,24 +99,6 @@ module Uc
 
 
     private  
-
-    def read(timeout)
-      event = ""
-      reader do |r|
-        r.receive(event, timeout)
-        parse event
-      end
-    end
- 
-    def parse(event_str)
-      arr = event_str.split("|",2)
-      if arr.length == 2
-        type, msg = arr[0], arr[1]
-      else
-        type, msg = "unknown", event
-      end
-      event = ::Uc::Event.new(type, msg)
-    end
 
     def mq
       @mq ||= ::Uc::Mqueue.new(@queue_name)
