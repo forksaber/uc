@@ -76,7 +76,7 @@ begin
     server.rolling_restart
   when "print-config"
     server.print_config
-  when "reopen-logs"
+  when "reopen-logs", "reopen_logs"
     server.reopen_logs
   when nil
     logger.error "No command specified"
