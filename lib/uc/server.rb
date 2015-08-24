@@ -63,7 +63,7 @@ module Uc
       init_once
       if config[:instances] == 0
         puts "0 instances specified: stopping"
-        stop
+        stop if server_status.running?
         return
       end
       uconfig.generate_once
