@@ -97,6 +97,7 @@ module Uc; module Unicorn
 
     def load_original_env
       return if not @original_env.is_a? Hash
+      # add unicorn specific environment vars like UNICORN_FD
       ENV.select { |k,v| k =~ /\AUNICORN_/ }.each { |k,v| @original_env[k] = v }
       ENV.replace(@original_env)
     end

@@ -1,5 +1,6 @@
 require 'uc/logger'
 require 'uc/error'
+require 'yaml'
 
 module Uc
   class Config
@@ -27,6 +28,8 @@ module Uc
         ready_wait: 5,
         listen: []
       }
+      load_env_yml "#{app_dir}/config/env.yml"
+      load_env_yml "#{app_dir}/.env.yml"
       read_from_file
       return @config
     end
@@ -79,47 +82,27 @@ module Uc
       config[:skip_clean_env] = value
     end
 
-    def env_hash
-      @env_hash ||= {}
-    end
-
-    def env(key, value)
-      env_hash[key] = value
-    end
-
-    def env_yml(path, safe: false)
-      @skip_autoload = true
-      load_env_yml path, safe: safe
+    def env_yml(path, required: true)
+      load_env_yml(path, required: required)
     end
 
     def load_env
+      # all environment variables will be loaded on config parsing
       config
-      if not @skip_autoload
-        load_env_yml "#{app_dir}/config/env.yml", safe: true, override: false
-      end
-      env_hash.each do |k,v|
-        ENV[k] = v.to_s
-      end
     end
 
-
-    def load_env_yml(path, safe: false, override: true)
+    def load_env_yml(path, required: false)
       if not File.readable? path
+        raise Error, "env file #{path} unreadable" if required
         logger.debug "skipped loading env from #{path}"
+        return {}
       end
-      require 'yaml'
+      logger.debug "loading env from #{path}"
       h = YAML.load_file(path)
-      env_hash.merge!(h) do |key, v1, v2|
-        override ? v2 : v1
-      end
-      logger.debug "loaded env from #{path}"
+      h.each { |k,v| ENV[k] = v.to_s }
     rescue => e
-      error_message = "failed to load env from #{path}: #{e.message}"
-      if not safe
-        raise ::Uc::Error, error_message
-      else
-        logger.debug error_message
-      end
+      raise Error, "failed to load env from #{path} : #{e.message}" if required
+      logger.debug "failed to load env from #{path} : #{e.message}"
     end
 
     def read_from_file

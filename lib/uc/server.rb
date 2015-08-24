@@ -32,7 +32,7 @@ module Uc
         puts "wont start 0 instances"
         return
       end
-      ENV["UNICORN_APP_DIR"] = config.app_dir
+      ENV["UNICORN_APP_DIR"] = config[:working_dir]
       event_stream.expect :fin do
         cmd %{unicorn -c #{uconfig.path} -D -E #{rails_env} }, return_output: false,
           error_msg: "error starting unicorn"
@@ -78,7 +78,7 @@ module Uc
 
     def print_config
       init_once
-      config.to_h.each do |k,v| 
+      config.each do |k,v| 
         v = %{ "#{v}" } if not v.is_a? Numeric
         puts "#{k} #{v}" 
       end
@@ -102,15 +102,15 @@ module Uc
     end
 
     def config
-      @config ||= ::Uc::Config.new(app_dir)
+      @config ||= ::Uc::Config.new(app_dir).to_h
     end
 
     def unicorn_paths
-      @unicorn_paths ||= ::Uc::Unicorn::Paths.new(config.app_dir)
+      @unicorn_paths ||= ::Uc::Unicorn::Paths.new(config[:working_dir])
     end
 
     def uconfig
-      @uconfig ||= ::Uc::Unicorn::Config.new(config.to_h, unicorn_paths)
+      @uconfig ||= ::Uc::Unicorn::Config.new(config, unicorn_paths)
     end
 
     def lock
@@ -121,8 +121,7 @@ module Uc
       paths.validate_required
       Dir.chdir app_dir
       lock.acquire
-      ::Uc::Logger.event_queue = config.event_queue_name
-      config.load_env
+      ::Uc::Logger.event_queue = config[:event_queue]
       event_stream.debug_output = true if @debug
     end
 

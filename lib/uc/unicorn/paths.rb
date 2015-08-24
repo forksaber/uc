@@ -14,27 +14,27 @@ module Uc
       end
 
       def stdout_log
-        rpath "log/unicorn.stdout.log"
+        abs_path "log/unicorn.stdout.log"
       end
 
       def stderr_log
-        rpath "log/unicorn.stderr.log"
+        abs_path "log/unicorn.stderr.log"
       end
 
       def socket
-        rpath "tmp/sockets/unicorn.sock"
+        abs_path "tmp/sockets/unicorn.sock"
       end
 
       def pid_file
-        rpath "tmp/pids/unicorn.pid"
+        abs_path "tmp/pids/unicorn.pid"
       end
 
       def lock_file
-        rpath "tmp/unicorn.lock"
+        abs_path "tmp/unicorn.lock"
       end
 
       def unicorn_config
-        rpath "tmp/unicorn_config.rb"
+        abs_path "tmp/unicorn_config.rb"
       end
 
       def unicorn_template
@@ -43,11 +43,9 @@ module Uc
 
       private
 
-     def rpath(path)
-        "#{app_dir}/#{path}"
-      end
-
-
+     def abs_path(path)
+      "#{app_dir}/#{path}"
+     end
 
     end
   end
