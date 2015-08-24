@@ -5,6 +5,11 @@ worker_processes <%= config.fetch :instances %>
 working_directory "<%= paths.app_dir %>"
 timeout <%= config.fetch :timeout %>
 listen "<%= paths.socket %>" , :backlog => <%= config.fetch :queue_size %>
+
+<% config.fetch(:listen).each do |port| %>
+listen <%= port %>
+<% end %>
+
 pid "<%= paths.pid_file %>"
 stdout_path "<%= paths.stdout_log %>"
 stderr_path "<%= paths.stderr_log %>"

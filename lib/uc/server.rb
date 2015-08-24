@@ -28,6 +28,10 @@ module Uc
         puts server_status
         return
       end
+      if config[:instances] == 0
+        puts "wont start 0 instances"
+        return
+      end
       ENV["UNICORN_APP_DIR"] = config.app_dir
       event_stream.expect :fin do
         cmd %{unicorn -c #{uconfig.path} -D -E #{rails_env} }, return_output: false,
@@ -57,6 +61,11 @@ module Uc
 
     def rolling_restart
       init_once
+      if config[:instances] == 0
+        puts "0 instances specified: stopping"
+        stop
+        return
+      end
       uconfig.generate_once
       if not server_status.running?
         start

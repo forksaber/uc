@@ -24,7 +24,8 @@ module Uc
         prestart_url: "/",
         working_dir: @app_dir,
         event_queue: "unicorn_#{Process.uid}",
-        ready_wait: 5
+        ready_wait: 5,
+        listen: []
       }
       read_from_file
       return @config
@@ -32,6 +33,10 @@ module Uc
 
     def to_h
       config
+    end
+
+    def listen(*ports)
+      config[:listen] = ports
     end
 
     def ready_wait(wait_timeout)
