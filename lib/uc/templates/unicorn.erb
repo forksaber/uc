@@ -1,3 +1,4 @@
+require 'nakayoshi_fork'
 require 'uc/unicorn/api'
 uc = ::Uc::Unicorn::Api.new("<%= config.fetch :event_queue %>")
 uc.init_original_env
