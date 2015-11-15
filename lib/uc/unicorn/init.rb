@@ -19,10 +19,6 @@ module Uc
         @event_type ||= (restart? ? "restart" : "start")
       end
 
-      def lock_file
-        @lock_file ||= "tmp/unicorn.lock"
-      end
-
       def run
         event_stream.debug "event_type #{event_type}"
         acquired = acquire_lock
@@ -47,7 +43,7 @@ module Uc
       end
 
       def lock_fd
-        @lock_fd ||= File.new(lock_file, "a+")
+        @lock_fd ||= File.new("tmp/unicorn.lock", "a+")
       end
 
       def end_run(worker)
