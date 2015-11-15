@@ -19,18 +19,11 @@ module Uc
         @worker = worker
         @run_id = run_id
         @ready_wait = ready_wait
+        @queue_name = "#{event_queue}_ready"
       end
 
       def run
         wait if ready_wait
-      end
-
-      def queue_name
-         @queue_name ||= "#{event_queue}_ready_#{worker.nr}"
-      end
-
-      def id
-        @id ||= worker.nr + 1
       end
 
       def wait
@@ -50,7 +43,7 @@ module Uc
       end
 
       def mq
-        @mq ||= ::Uc::Mqueue.new(queue_name, max_msg: 10, msg_size: 30)
+        @mq ||= ::Uc::Mqueue.new(@queue_name, max_msg: 10, msg_size: 30)
       end
 
     end
