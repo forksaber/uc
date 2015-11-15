@@ -1,18 +1,21 @@
 require 'uc/logger'
+require 'uc/unicorn/helper'
+
 module Uc
   module Unicorn
     class Prestart
 
       include ::Uc::Logger
-      attr_reader :server, :worker, :url
+      include Helper
 
+      attr_reader :server, :worker, :url
 
       def initialize(server, worker, url: "/")
         @server = server
         @worker = worker
         @url = url
       end
-    
+
       def app
         @app ||= server.instance_variable_get("@app")
       end
@@ -32,10 +35,6 @@ module Uc
         event_stream.debug "worker #{id} prestart successful"
       rescue => e
         event_stream.warn "prestart failed for worker #{id}, #{e.class}"
-      end
-
-      def id
-        @id ||= worker.nr + 1
       end
 
       private
