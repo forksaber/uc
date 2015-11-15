@@ -18,6 +18,7 @@ module Uc
         @worker = worker
         @run_id = run_id
         @ready_wait = ready_wait
+        @queue_name ||= "#{event_queue}_ready"
       end
 
       def run
@@ -28,16 +29,9 @@ module Uc
       #    event_stream.pub :fin, "server #{server_event} successful"
       end
 
-      def queue_name
-         @queue_name ||= "#{event_queue}_ready_#{worker.nr + 1}"
-      end
-
-      def id
-        @id ||= worker.nr + 1
-      end
-
       def notify
         mq.create
+        mq.clear
         msg = mq.nb_writer do |writer|
           writer.send event
         end
@@ -50,7 +44,7 @@ module Uc
       end
 
       def mq
-        @mq ||= ::Uc::Mqueue.new(queue_name, max_msg: 10, msg_size: 30)
+        @mq ||= ::Uc::Mqueue.new(@queue_name, max_msg: 10, msg_size: 30)
       end
 
     end
