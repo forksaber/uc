@@ -1,0 +1,3 @@
+- refactor and simplify all files in unicorn/
+- try with rainbows
+- socket interface for controlling uc and ability to run under supervisord
