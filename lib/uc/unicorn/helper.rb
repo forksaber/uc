@@ -18,6 +18,10 @@ module Uc
         "#{server.config[:pid]}.oldbin"
       end
 
+      def id
+        worker.nr + 1
+      end
+
 
     end
   end
