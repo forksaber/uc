@@ -30,7 +30,8 @@ module Uc
       }
       load_env_yml "#{app_dir}/config/env.yml"
       load_env_yml "#{app_dir}/.env.yml"
-      read_from_file
+      read_from_file "#{app_dir}/config/uc.custom.rb"
+      read_from_file config_file
       return @config
     end
 
@@ -109,9 +110,9 @@ module Uc
       logger.debug "failed to load env from #{path} : #{e.message}"
     end
 
-    def read_from_file
-      return if not File.readable? config_file
-      instance_eval(File.read(config_file))
+    def read_from_file(file)
+      return if not File.readable? file
+      instance_eval(File.read(file))
     rescue NoMethodError => e
       logger.warn "invalid option used in config: #{e.name}"
     end
