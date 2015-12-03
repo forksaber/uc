@@ -5,7 +5,7 @@ require 'yaml'
 module Uc
   class Config
 
-    include ::Uc::Logger
+    include Logger
 
     def initialize(app_dir, config_file = nil)
       @config_file = config_file
