@@ -22,6 +22,13 @@ module Uc
         worker.nr + 1
       end
 
+      def ready_queue
+        "#{event_queue}_ready"
+      end
+
+      def ready_event
+        run_id ? "ready_#{run_id}" : "ready"
+      end
 
     end
   end
