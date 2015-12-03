@@ -3,11 +3,10 @@ require 'uc/unicorn/helper'
 
 module Uc
   module Unicorn
-  
     class GradualShutdown
 
-      include ::Uc::Logger
-      include ::Uc::Unicorn::Helper
+      include Logger
+      include Helper
 
       attr_reader :server, :worker
 
@@ -17,41 +16,30 @@ module Uc
       end
 
       def run
-        return if not (server && worker)
         return if not restart?
-        shutdown_old_master 
+        event_stream.debug "stopping old worker #{id}"
+        if kill sig
+          event_stream.debug("stopped old worker #{id}")
+        end
+      rescue => e
+        log_error e
       end
 
-      def shutdown_old_master
-        event_stream.debug "stopping old worker #{id}"
-        if send_signal
-          event_stream.debug "stopped old worker #{id}"
-        end
-      end
+      private
 
       def sig
         (worker.nr + 1) >= server.worker_processes ? :QUIT : :TTOU
       end
 
-      def send_signal
+      def kill(sig)
         Process.kill(sig, File.read(old_pid).to_i)
-        return true
-      rescue => e
-        log_kill_error e
-        return false
       end
 
-      def log_kill_error(e)
-        stderr.info "error sending kill signal #{id}| #{e.class} #{e.message}"
-        event_stream.warn "error while stopping worker #{worker.nr + 1}, #{e.class}"
-      end
-
-      def id
-        @id ||= (worker.nr + 1)
+      def log_error(e)
+        stderr.info "error while stopping worker #{id}| #{e.class} #{e.message}"
+        event_stream.warn "error while stopping worker #{id}, #{e.class}"
       end
 
     end
-
   end
 end
-
