@@ -91,6 +91,10 @@ module Uc
       config
     end
 
+    def after_fork(&block)
+      config[:after_fork] = block
+    end
+
     def load_env_yml(path, required: false)
       if not File.readable? path
         raise Error, "env file #{path} unreadable" if required

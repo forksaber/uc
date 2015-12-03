@@ -34,6 +34,11 @@ module Uc; module Unicorn
       gradual_shutdown.run
     end
 
+    def custom_after_fork
+      after_fork = uc_config.config[:after_fork]
+      after_fork.call if after_fork
+    end
+
     def prestart(server, worker, **kwargs)
       prestart = ::Uc::Unicorn::Prestart.new(server, worker, **kwargs)
       prestart.run

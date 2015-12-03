@@ -41,6 +41,7 @@ after_fork do |server, worker|
   if defined?(Resque)
     Resque.redis.client.reconnect
   end
+  uc.custom_after_fork
  
   uc.prestart server, worker, url: "<%= config.fetch :prestart_url %>"
   uc.send_worker_ready server, worker, ready_wait: ready_wait
