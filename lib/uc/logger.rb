@@ -6,6 +6,8 @@ require 'securerandom'
 module Uc
   module Logger
 
+    RUN_ID = SecureRandom.hex(3)
+
     class << self
       attr_reader :event_queue
     end
@@ -27,10 +29,6 @@ module Uc
       @event_stream ||= ::Uc::EventStream.new(event_queue)
     end
 
-    def self.run_id
-      @run_id ||= SecureRandom.hex(3)
-    end
-
     def event_stream
       ::Uc::Logger.event_stream
     end
@@ -48,7 +46,7 @@ module Uc
     end
 
     def run_id
-      ::Uc::Logger.run_id
+      RUN_ID
     end
   end
 end
