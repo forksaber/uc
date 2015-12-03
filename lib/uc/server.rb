@@ -45,7 +45,7 @@ module Uc
         logger.info "unicorn not running"
         return
       end
-      kill(server_status.pid, 30)
+      kill(server_status.pid, 15)
     end
 
     def status

@@ -4,8 +4,8 @@ require 'uc/logger'
 module Uc
   class Status
 
-    include ::Uc::ShellHelper
-    include ::Uc::Logger
+    include ShellHelper
+    include Logger
 
     attr_reader :paths
     attr_accessor :use_pid
@@ -27,7 +27,7 @@ module Uc
       else
         logger.debug "pids holding unicorn.lock => #{fuser_pids.join(' ')}"
         logger.debug "pid from file => #{pid}"
-        raise ::Uc::Error, "stale pid #{pid}"
+        raise Error, "stale pid #{pid}"
       end
     end
 
@@ -40,14 +40,14 @@ module Uc
     end
 
     def to_s
-      status = ( running? ? "Running pid #{pid}" : "Stopped" )
+      running? ? "Running pid #{pid}" : "Stopped"
     end
       
     private
 
     def ex_lock_available?
       File.open( paths.lock_file, 'a+') do |f|
-        ex_lock = f.flock(File::LOCK_EX|File::LOCK_NB)
+        f.flock(File::LOCK_EX|File::LOCK_NB)
       end
     end
 
