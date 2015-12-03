@@ -1,4 +1,5 @@
 require 'uc/config'
+require 'uc/unicorn/lock'
 require 'uc/unicorn/init'
 require 'uc/unicorn/gradual_shutdown'
 require 'uc/unicorn/prestart'
@@ -8,20 +9,23 @@ require 'securerandom'
 require 'uc/logger'
 
 module Uc; module Unicorn
- 
   class Api
 
-    attr_reader :run_id, :original_env
+    attr_reader :original_env
     attr_accessor :queue_name
 
     def initialize(event_queue)
       @queue_name = event_queue
-      @run_id = SecureRandom.hex(3)
       ::Uc::Logger.event_queue = queue_name
     end
-    
+
+    def acquire_shared_lock
+      @shared_lock = Lock.new
+      @shared_lock.acquire
+    end
+
     def init(server)
-      @init ||= ::Uc::Unicorn::Init.new(server)
+      @init ||= Init.new(server)
       @init.run_once
     end
 
@@ -37,19 +41,12 @@ module Uc; module Unicorn
 
     def send_worker_ready(server, worker, **kwargs)
       ready_event = ::Uc::Unicorn::ReadyEvent.new(server, worker, **kwargs)
-      ready_event.run_id = run_id
       ready_event.run
     end
 
     def wait_for_worker_ready(server, worker, **kwargs)
       ready_event_wait = ::Uc::Unicorn::ReadyWait.new(server, worker, **kwargs)
-      ready_event_wait.run_id = run_id
       ready_event_wait.run
-    end
-
-    def acquire_shared_lock(lock_file)
-      shared_lock = ::Uc::Unicorn::Lock.new(lock_file)
-      shared_lock.acquire
     end
 
     def oom_adjust
@@ -60,10 +57,6 @@ module Uc; module Unicorn
       end
     end
 
-    def shared_env
-      @shared_env ||= {}
-    end
-
     def end_run(worker)
       @init.end_run(worker)
     end
@@ -72,6 +65,11 @@ module Uc; module Unicorn
       event_stream = ::Uc::Logger.event_stream
       event_stream.close_connections
       event_stream.fatal "re-exec failed"
+    end
+
+    def init_original_env
+      return if @original_env
+      @original_env = ENV.to_h
     end
 
     def clean_env
@@ -89,12 +87,6 @@ module Uc; module Unicorn
       uc_config.load_env
     end
 
-    def cleaned_path
-      paths = (ENV["PATH"] || "").split(File::PATH_SEPARATOR)
-      paths.reject! { |x| x =~ /vendor\/bundle\/ruby/ }
-      paths.uniq.join(File::PATH_SEPARATOR)
-    end
-
     def load_original_env
       return if not @original_env.is_a? Hash
       # add unicorn specific environment vars like UNICORN_FD
@@ -102,9 +94,12 @@ module Uc; module Unicorn
       ENV.replace(@original_env)
     end
 
-    def init_original_env
-      return if @original_env
-      @original_env = ENV.to_h
+    private
+
+    def cleaned_path
+      paths = (ENV["PATH"] || "").split(File::PATH_SEPARATOR)
+      paths.reject! { |x| x =~ /vendor\/bundle\/ruby/ }
+      paths.uniq.join(File::PATH_SEPARATOR)
     end
 
     def uc_config
@@ -112,5 +107,4 @@ module Uc; module Unicorn
     end
 
   end
-
 end; end

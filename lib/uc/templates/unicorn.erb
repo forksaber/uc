@@ -24,6 +24,8 @@ GC.respond_to?(:copy_on_write_friendly=) and
 
 check_client_connection false
 
+uc.acquire_shared_lock
+
 before_fork do |server, worker|
   uc.init(server)
   uc.wait_for_worker_ready(server, worker, ready_wait: ready_wait)
