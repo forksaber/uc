@@ -1,0 +1,109 @@
+From 1e1d64e1fa45c1af38d701c1d35c6c05d226db06 Mon Sep 17 00:00:00 2001
+Date: Mon, 26 Dec 2016 23:33:56 +0530
+Subject: [PATCH] add on_exec_fail hook and load rake from Gemfile
+
+---
+ bin/unicorn                 | 31 ++++++++++++++++++++++++++++++-
+ bin/unicorn_rails           |  2 +-
+ lib/unicorn/configurator.rb |  4 ++++
+ lib/unicorn/http_server.rb  |  7 +++++++
+ 4 files changed, 42 insertions(+), 2 deletions(-)
+
+diff --git a/bin/unicorn b/bin/unicorn
+index 3c5e5cb..9e6c94f 100755
+--- a/bin/unicorn
++++ b/bin/unicorn
+@@ -1,5 +1,34 @@
+-#!/this/will/be/overwritten/or/wrapped/anyways/do/not/worry/ruby
++#!/usr/bin/env ruby
+ # -*- encoding: binary -*-
++
++def set_gem_path
++  app_dir = ENV["UNICORN_APP_DIR"]
++  return if not app_dir
++  split = RUBY_VERSION.split(".")
++  major_version = "#{split[0]}.#{split[1]}.0"
++  dir = "#{app_dir}/vendor/bundle/ruby/#{major_version}"
++  return if not File.exist? dir
++  ENV["GEM_PATH"] = dir
++  Gem.clear_paths
++end
++
++def activate_rack_from_gemfile
++  app_dir = ENV["UNICORN_APP_DIR"]
++  return if not app_dir
++  Dir.chdir app_dir do
++    return if not File.exists? "Gemfile"
++    gem_version = `bundle show rack`.chomp.split("/").last.split("-").last
++    return if not gem_version =~ /\A[0-9]+.*\z/
++    puts "activating rack version #{gem_version}"
++    gem 'rack', "=#{gem_version}"
++  end
++rescue
++  puts "error activating gem rack version"
++end
++
++set_gem_path
++activate_rack_from_gemfile
++
+ require 'unicorn/launcher'
+ require 'optparse'
+ 
+diff --git a/bin/unicorn_rails b/bin/unicorn_rails
+index ea4f822..0c18e54 100755
+--- a/bin/unicorn_rails
++++ b/bin/unicorn_rails
+@@ -1,4 +1,4 @@
+-#!/this/will/be/overwritten/or/wrapped/anyways/do/not/worry/ruby
++#!/usr/bin/env ruby
+ # -*- encoding: binary -*-
+ require 'unicorn/launcher'
+ require 'optparse'
+diff --git a/lib/unicorn/configurator.rb b/lib/unicorn/configurator.rb
+index 3329c10..4b79484 100644
+--- a/lib/unicorn/configurator.rb
++++ b/lib/unicorn/configurator.rb
+@@ -168,6 +168,10 @@ def before_exec(*args, &block)
+     set_hook(:before_exec, block_given? ? block : args[0], 1)
+   end
+ 
++  def on_exec_fail(*args, &block)
++    set_hook(:on_exec_fail, block_given? ? block : args[0], 1)
++  end
++
+   # sets the timeout of worker processes to +seconds+.  Workers
+   # handling the request/app.call/response cycle taking longer than
+   # this time period will be forcibly killed (via SIGKILL).  This
+diff --git a/lib/unicorn/http_server.rb b/lib/unicorn/http_server.rb
+index 35bd100..c0365fb 100644
+--- a/lib/unicorn/http_server.rb
++++ b/lib/unicorn/http_server.rb
+@@ -13,6 +13,7 @@ class Unicorn::HttpServer
+   # :stopdoc:
+   attr_accessor :app, :timeout, :worker_processes,
+                 :before_fork, :after_fork, :before_exec,
++                :on_exec_fail,
+                 :listener_opts, :preload_app,
+                 :orig_app, :config, :ready_pipe, :user
+ 
+@@ -393,6 +394,7 @@ def reap_all_workers
+         @reexec_pid = 0
+         self.pid = pid.chomp('.oldbin') if pid
+         proc_name 'master'
++        on_exec_fail_safe
+       else
+         worker = @workers.delete(wpid) and worker.close rescue nil
+         m = "reaped #{status.inspect} worker=#{worker.nr rescue 'unknown'}"
+@@ -821,4 +823,9 @@ def time_now # Ruby <= 2.0
+       Time.now
+     end
+   end
++
++  def on_exec_fail_safe
++    on_exec_fail.call(self)
++  rescue
++  end
+ end
+-- 
+1.8.3.1
+

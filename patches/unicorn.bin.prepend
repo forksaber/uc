@@ -1,0 +1,30 @@
+#!/usr/bin/env ruby
+# -*- encoding: binary -*-
+
+def set_gem_path
+  app_dir = ENV["UNICORN_APP_DIR"]
+  return if not app_dir
+  split = RUBY_VERSION.split(".")
+  major_version = "#{split[0]}.#{split[1]}.0"
+  dir = "#{app_dir}/vendor/bundle/ruby/#{major_version}"
+  return if not File.exist? dir
+  Gem.path.insert(0, dir)
+  Gem.refresh
+end
+
+def activate_rack_from_gemfile
+  app_dir = ENV["UNICORN_APP_DIR"]
+  return if not app_dir
+  Dir.chdir app_dir do
+    return if not File.exists? "Gemfile"
+    gem_version = `bundle show rack`.chomp.split("/").last.split("-").last
+    return if not gem_version =~ /\A[0-9]+.*\z/
+    puts "activating rack version #{gem_version}"
+    gem 'rack', "=#{gem_version}"
+  end
+rescue
+  puts "error activating gem rack version"
+end
+
+set_gem_path
+activate_rack_from_gemfile
